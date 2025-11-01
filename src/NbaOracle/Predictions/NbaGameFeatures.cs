@@ -13,6 +13,12 @@ public class NbaGameTrainingData
     public float HomeEloRating { get; set; }
     public float AwayEloRating { get; set; }
     
+    public float HomeEloMomentum5Games { get; set; }
+    public float AwayEloMomentum5Games { get; set; }
+    
+    public float HomeEloMomentum10Games { get; set; }
+    public float AwayEloMomentum10Games { get; set; }
+    
     public float? HomeOdds { get; set; }
     public float? AwayOdds { get; set; }
     
@@ -49,6 +55,14 @@ public class NbaGameFeatures
     public required float HomeEloRating { get; set; }
     public required float AwayEloRating { get; set; }
     public required float EloDiff { get; set; }
+    
+    public required float HomeEloMomentum5Games { get; set; }
+    public required float AwayEloMomentum5Games { get; set; }
+    public required float EloMomentum5GamesDiff { get; set; }
+    
+    public required float HomeEloMomentum10Games { get; set; }
+    public required float AwayEloMomentum10Games { get; set; }
+    public required float EloMomentum10GamesDiff { get; set; }
     
     public float HomeOdds { get; set; }
     public float AwayOdds { get; set; }

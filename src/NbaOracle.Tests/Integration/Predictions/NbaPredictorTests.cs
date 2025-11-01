@@ -43,6 +43,7 @@ public class NbaPredictorTests : IntegrationTestBase
         var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), teams);
         
         int[] trainingSeasons = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+        var trainingDataSet = new TrainingDataSet();
         foreach (var season in trainingSeasons)
         {
             var games = await gameLoader.GetGames(new Season(season));
@@ -50,7 +51,9 @@ public class NbaPredictorTests : IntegrationTestBase
 
             foreach (var game in games)
             {
-                historicalModel.Process(new GameInfo(game, odds.GetValueOrDefault(game.GameId)));
+                var gameInfo = new GameInfo(game, odds.GetValueOrDefault(game.GameId));
+                trainingDataSet.AddGame(gameInfo, historicalModel);
+                historicalModel.Evolve(gameInfo);
             }
             
             historicalModel.Regress();
@@ -74,19 +77,17 @@ public class NbaPredictorTests : IntegrationTestBase
             nameof(NbaGameFeatures.AwayBackToBack),
         ];
 
-        var trainingGames = historicalModel.TrainingGames;
-        
         var lightGbm = new LightGbmClassifier(LightGbmClassifier.DefaultOptions, ClassifierConfig.None, features);
         var lightGbm_WithMatchup = new LightGbmClassifier(LightGbmClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
         
-        lightGbm.TrainModel(trainingGames);
-        lightGbm_WithMatchup.TrainModel(trainingGames);
+        lightGbm.TrainModel(trainingDataSet.TrainingGames);
+        lightGbm_WithMatchup.TrainModel(trainingDataSet.TrainingGames);
         
         var fastForest = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.None, features);
         var fastForest_WithMatchup = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
         
-        fastForest.TrainModel(trainingGames);
-        fastForest_WithMatchup.TrainModel(trainingGames);
+        fastForest.TrainModel(trainingDataSet.TrainingGames);
+        fastForest_WithMatchup.TrainModel(trainingDataSet.TrainingGames);
 
         var classifiers = new List<(IPredictionEngine, PredictionPerformanceTracker)>
         {
@@ -126,8 +127,8 @@ public class NbaPredictorTests : IntegrationTestBase
                         AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
                         HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
                         AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.CurrentStreak,
-                        AwayCurrentStreak = away.CurrentStreak,
+                        HomeCurrentStreak = home.Streak,
+                        AwayCurrentStreak = away.Streak,
                         HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
                         AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
                         HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
@@ -137,7 +138,7 @@ public class NbaPredictorTests : IntegrationTestBase
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
                     
-                    model.Process(new GameInfo(game, null));
+                    model.Evolve(new GameInfo(game, null));
                 }   
             }
         }
@@ -166,6 +167,7 @@ public class NbaPredictorTests : IntegrationTestBase
         var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), teams);
         
         int[] trainingSeasons = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+        var trainingDataSet = new TrainingDataSet();
         foreach (var season in trainingSeasons)
         {
             var games = await gameLoader.GetGames(new Season(season));
@@ -173,7 +175,9 @@ public class NbaPredictorTests : IntegrationTestBase
 
             foreach (var game in games)
             {
-                historicalModel.Process(new GameInfo(game, odds.GetValueOrDefault(game.GameId)));
+                var gameInfo = new GameInfo(game, odds.GetValueOrDefault(game.GameId));
+                trainingDataSet.AddGame(gameInfo, historicalModel);
+                historicalModel.Evolve(gameInfo);
             }
             
             historicalModel.Regress();
@@ -216,8 +220,6 @@ public class NbaPredictorTests : IntegrationTestBase
             nameof(NbaGameFeatures.AwayBackToBack),
         ];
 
-        var trainingGames = historicalModel.TrainingGames;
-        
         var options = new FastForestBinaryTrainer.Options
         {
             NumberOfTrees = 225,
@@ -229,28 +231,28 @@ public class NbaPredictorTests : IntegrationTestBase
             FeatureColumnName = "Features",
         };
         
-        var fastForest_Default = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.None, features);
+        //var fastForest_Default = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.None, features);
         //var fastForest_WithMatchup_Default = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
         
         var fastForest_CustomOptions = new FastForestClassifier(options, ClassifierConfig.None, features);
-        //var fastForest_WithMatchup_CustomOptions = new FastForestClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
+        var fastForest_WithMatchup_CustomOptions = new FastForestClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
         var fastForest_WithAllCategories_CustomOptions = new FastForestClassifier(options, ClassifierConfig.All(CategoryConfig.OneHot(), CategoryConfig.OneHot(), CategoryConfig.OneHotHash()), features);
         
-        fastForest_Default.TrainModel(trainingGames);
+        //fastForest_Default.TrainModel(trainingDataSet.TrainingGames);
         //fastForest_WithMatchup_Default.TrainModel(trainingGames);
         
-        fastForest_CustomOptions.TrainModel(trainingGames);
-        //fastForest_WithMatchup_CustomOptions.TrainModel(trainingGames);
-        fastForest_WithAllCategories_CustomOptions.TrainModel(trainingGames);
+        fastForest_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        fastForest_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        fastForest_WithAllCategories_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
         
         var classifiers = new List<(IPredictionEngine, PredictionPerformanceTracker)>
         {
-            (fastForest_Default, new PredictionPerformanceTracker("FastForest - Default")),
+            //(fastForest_Default, new PredictionPerformanceTracker("FastForest - Default")),
             //(fastForest_WithMatchup_Default, new PredictionPerformanceTracker("FastForest - Default With Matchup category")),
             
             (fastForest_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom")),
-            //(fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With Matchup category")),
-            //(fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With all categories"))
+            (fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With Matchup category")),
+            (fastForest_WithAllCategories_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With all categories"))
         };
         
         var games2024 = await gameLoader.GetGames(new Season(2024));
@@ -275,6 +277,10 @@ public class NbaPredictorTests : IntegrationTestBase
                         MatchupIdentifier = game.MatchupIdentifier,
                         HomeEloRating = (float) home.EloRating,
                         AwayEloRating = (float) away.EloRating,
+                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
+                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
+                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
+                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
                         HomeOdds = (float?) gameOdds?.HomeOdds,
                         AwayOdds = (float?) gameOdds?.AwayOdds,
                         HomeTotalWinPercentage = (float) home.TotalWinPercentage,
@@ -287,8 +293,8 @@ public class NbaPredictorTests : IntegrationTestBase
                         AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
                         HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
                         AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.CurrentStreak,
-                        AwayCurrentStreak = away.CurrentStreak,
+                        HomeCurrentStreak = home.Streak,
+                        AwayCurrentStreak = away.Streak,
                         HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
                         AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
                         HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
@@ -298,7 +304,7 @@ public class NbaPredictorTests : IntegrationTestBase
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
                     
-                    model.Process(new GameInfo(game, null));
+                    model.Evolve(new GameInfo(game, null));
                 }   
             }
         }

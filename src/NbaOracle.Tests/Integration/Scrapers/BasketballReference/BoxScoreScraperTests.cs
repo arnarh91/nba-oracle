@@ -12,9 +12,17 @@ namespace NbaOracle.Tests.Integration.Scrapers.BasketballReference;
 public class BoxScoreScraperTests : IntegrationTestBase
 {
     [Theory]
-    // [InlineData(2024)]
-    // [InlineData(2023)]
+    [InlineData(2024)]
+    [InlineData(2023)]
     [InlineData(2022)]
+    [InlineData(2021)]
+    [InlineData(2020)]
+    [InlineData(2019)]
+    [InlineData(2018)]
+    [InlineData(2017)]
+    [InlineData(2016)]
+    [InlineData(2015)]
+    [InlineData(2014)]
     public async Task Provider(int seasonStartYear)
     {
         var season = new Season(seasonStartYear);

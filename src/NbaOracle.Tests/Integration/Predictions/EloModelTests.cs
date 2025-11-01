@@ -58,7 +58,7 @@ public class EloModelTests : IntegrationTestBase
         {
             foreach (var (model, _) in models)
             {
-                model.Process(new GameInfo(game, null));
+                model.Evolve(new GameInfo(game, null));
             }
         }
         
@@ -69,7 +69,7 @@ public class EloModelTests : IntegrationTestBase
         {
             foreach (var (model, _) in models)
             {
-                model.Process(new GameInfo(game, null));
+                model.Evolve(new GameInfo(game, null));
             }
         }
         
@@ -122,7 +122,7 @@ public class EloModelTests : IntegrationTestBase
         {
             foreach (var (model, _) in models)
             {
-                model.Process(new GameInfo(game, null));
+                model.Evolve(new GameInfo(game, null));
             }
         }
         
@@ -133,7 +133,7 @@ public class EloModelTests : IntegrationTestBase
         {
             foreach (var (model, _) in models)
             {
-                model.Process(new GameInfo(game, null));
+                model.Evolve(new GameInfo(game, null));
             }
         }
         

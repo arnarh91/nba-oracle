@@ -39,6 +39,14 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
         nameof(NbaGameFeatures.AwayEloRating),
         nameof(NbaGameFeatures.EloDiff),
     
+        nameof(NbaGameFeatures.HomeEloMomentum5Games),
+        nameof(NbaGameFeatures.AwayEloMomentum5Games),
+        nameof(NbaGameFeatures.EloMomentum5GamesDiff),
+        
+        nameof(NbaGameFeatures.HomeEloMomentum10Games),
+        nameof(NbaGameFeatures.AwayEloMomentum10Games),
+        nameof(NbaGameFeatures.EloMomentum10GamesDiff),
+        
         nameof(NbaGameFeatures.HomeTotalWinPercentage),
         nameof(NbaGameFeatures.AwayTotalWinPercentage),
         nameof(NbaGameFeatures.TotalWinPercentageDiff),
@@ -109,6 +117,14 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
             EloDiff = game.HomeEloRating - game.AwayEloRating,
             HomeEloRating = game.HomeEloRating,
             AwayEloRating = game.AwayEloRating,
+            
+            HomeEloMomentum5Games = game.HomeEloMomentum5Games,
+            AwayEloMomentum5Games = game.AwayEloMomentum5Games,
+            EloMomentum5GamesDiff = game.HomeEloMomentum5Games - game.AwayEloMomentum5Games,
+            
+            HomeEloMomentum10Games = game.HomeEloMomentum10Games,
+            AwayEloMomentum10Games = game.AwayEloMomentum10Games,
+            EloMomentum10GamesDiff = game.HomeEloMomentum10Games - game.AwayEloMomentum10Games,
             
             HomeOdds = game.HomeOdds ?? float.NaN,
             AwayOdds = game.AwayOdds ?? float.NaN,

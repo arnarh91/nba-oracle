@@ -15,8 +15,6 @@ public class NbaHistoricalModel
 {
     private readonly IEloCalculator _eloCalculator; 
     private readonly Dictionary<string, TeamStatistics> _teams;
-
-    public List<NbaGameTrainingData> TrainingGames { get; } = [];
     
     public NbaHistoricalModel(IEloCalculator eloCalculator, HashSet<string> teamIdentifiers)
     {
@@ -56,41 +54,12 @@ public class NbaHistoricalModel
         return scoreByDate;
     }
 
-    public void Process(GameInfo gameInfo)
+    public void Evolve(GameInfo gameInfo)
     {
         var game = gameInfo.Game;
         
         var home = _teams[game.HomeTeam];
         var away = _teams[game.AwayTeam];
-
-        // TODO Færa þetta útúr módelinu.
-        TrainingGames.Add(new NbaGameTrainingData
-        {
-            HomeIdentifier = home.TeamIdentifier,
-            AwayIdentifier = away.TeamIdentifier,
-            HomeTeamWon = game.WinTeam == game.HomeTeam,
-            MatchupIdentifier = game.MatchupIdentifier,
-            HomeEloRating = (float) home.EloRating,
-            AwayEloRating = (float) away.EloRating,
-            HomeOdds = (float?) gameInfo.Odds?.HomeOdds,
-            AwayOdds = (float?) gameInfo.Odds?.AwayOdds,
-            HomeTotalWinPercentage = (float)home.TotalWinPercentage,
-            AwayTotalWinPercentage = (float)away.TotalWinPercentage,
-            HomeWinPercentageAtHome = (float)home.HomeWinPercentage,
-            AwayWinPercentageWhenAway = (float)away.AwayWinPercentage,
-            HomeLastTenGamesWinPercentage = (float)home.LastTenGameWinPercentage,
-            AwayLastTenGamesWinPercentage = (float)away.LastTenGameWinPercentage,
-            HomeOffensiveRating = (float)home.LastTenGamesOffensiveRatingPercentage,
-            AwayOffensiveRating = (float)away.LastTenGamesOffensiveRatingPercentage,
-            HomeDefensiveRating = (float)home.LastTenGamesDefensiveRatingPercentage,
-            AwayDefensiveRating = (float)away.LastTenGamesDefensiveRatingPercentage,
-            HomeCurrentStreak = home.CurrentStreak,
-            AwayCurrentStreak = away.CurrentStreak,
-            HomeRestDaysBeforeGame = home.RestDays,
-            AwayRestDaysBeforeGame = away.RestDays,
-            HomeBackToBack = home.LastGameDate == game.GameDate.AddDays(-1),
-            AwayBackToBack = away.LastGameDate == game.GameDate.AddDays(-1),
-        });
         
         var (updatedHomeEloRating, updatedAwayEloRating) = _eloCalculator.Calculate(home, away, game);
         
@@ -103,7 +72,7 @@ public class NbaHistoricalModel
         foreach (var team in _teams.Values)
         {
             team.EloRating = mean + regressionFactor * (team.EloRating - mean);
-            team.CurrentStreak = 0;
+            team.Streak = 0;
             team.LastGameDate = null;
         }
     }
@@ -123,9 +92,11 @@ public class TeamStatistics
     public DateOnly? LastGameDate { get; set; }
     
     public double EloRating { get; set; }
+    public double EloMomentum5Games { get; set; }
+    public double EloMomentum10Games { get; set; }
     public List<EloRating> EloRatings { get; }
     
-    public int CurrentStreak { get; set; }
+    public int Streak { get; set; }
     
     public int TotalGames { get; set; }
     public int TotalWins { get; set; }
@@ -174,7 +145,7 @@ public class TeamStatistics
         EloRating = teamStatistics.EloRating;
         EloRatings.Add(teamStatistics.EloRatings.OrderByDescending(x => x.Date).First());
 
-        CurrentStreak = teamStatistics.CurrentStreak;
+        Streak = teamStatistics.Streak;
 
         TotalGames = teamStatistics.TotalGames;
         TotalWins = teamStatistics.TotalWins;
@@ -203,14 +174,23 @@ public class TeamStatistics
     private void SetEloRating(Game game, double eloRating)
     {
         EloRating = eloRating;
+        
         EloRatings.Add(new EloRating(game.GameDate, eloRating));
+        if (EloRatings.Count > 20)
+            EloRatings.RemoveAt(0);
+
+        var last5 = EloRatings.OrderByDescending(x => x.Date).Skip(5).FirstOrDefault();
+        EloMomentum5Games = EloRating - last5?.Rating ?? 0.0;
+        
+        var last10 = EloRatings.OrderByDescending(x => x.Date).Skip(10).FirstOrDefault();
+        EloMomentum10Games = EloRating - last10?.Rating ?? 0.0;
     }
     
     private void SetCurrentStreak(Game game)
     {
-        CurrentStreak = TeamIdentifier == game.WinTeam 
-            ? Math.Max(1, CurrentStreak + 1) 
-            : Math.Min(-1, CurrentStreak - 1);
+        Streak = TeamIdentifier == game.WinTeam 
+            ? Math.Max(1, Streak + 1) 
+            : Math.Min(-1, Streak - 1);
     }
 
     private void SetHomeWins(Game game)
