@@ -1,0 +1,197 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.ML;
+using Microsoft.ML.Trainers;
+using NbaOracle.Predictions.Elo;
+
+// ReSharper disable ConvertToPrimaryConstructor
+
+namespace NbaOracle.Predictions.Classifiers;
+
+public interface IPredictionEngine
+{
+    NbaGamePrediction PredictGame(NbaGameTrainingData gameTrainingData);
+}
+
+public abstract class ClassifierBase<TOptions> : IPredictionEngine 
+    where TOptions : TrainerInputBase
+{
+    private readonly TOptions _options;
+    private readonly ClassifierConfig _classifierConfig;
+    private readonly string[] _features;
+ 
+    private readonly MLContext _mlContext;
+    private ITransformer _model = null!;
+    private PredictionEngine<NbaGameFeatures, NbaGamePrediction> _predictionEngine = null!;
+    
+    protected ClassifierBase(TOptions options, ClassifierConfig classifierConfig, string[] features)
+    {
+        _options = options;
+        _features = features;
+        _classifierConfig = classifierConfig;
+        _mlContext = new MLContext(classifierConfig.Seed);
+    }
+    
+    public static readonly string[] AllFeatures =
+    [
+        nameof(NbaGameFeatures.HomeEloRating),
+        nameof(NbaGameFeatures.AwayEloRating),
+        nameof(NbaGameFeatures.EloDiff),
+    
+        nameof(NbaGameFeatures.HomeTotalWinPercentage),
+        nameof(NbaGameFeatures.AwayTotalWinPercentage),
+        nameof(NbaGameFeatures.TotalWinPercentageDiff),
+    
+        nameof(NbaGameFeatures.HomeOdds),
+        nameof(NbaGameFeatures.AwayOdds),
+        nameof(NbaGameFeatures.OddsDiff),
+        
+        nameof(NbaGameFeatures.HomeWinPercentageAtHome),
+        nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
+        
+        nameof(NbaGameFeatures.HomeLastTenGamesWinPercentage),
+        nameof(NbaGameFeatures.AwayLastTenGamesWinPercentage),
+        nameof(NbaGameFeatures.LastTenGamesWinPercentageDiff),
+        
+        nameof(NbaGameFeatures.HomeOffensiveRating),
+        nameof(NbaGameFeatures.AwayOffensiveRating),
+        nameof(NbaGameFeatures.OffensiveRatingDiff),
+        
+        nameof(NbaGameFeatures.HomeDefensiveRating),
+        nameof(NbaGameFeatures.AwayDefensiveRating),
+        nameof(NbaGameFeatures.DefensiveRatingDiff),
+        
+        nameof(NbaGameFeatures.HomeCurrentStreak),
+        nameof(NbaGameFeatures.AwayCurrentStreak),
+        nameof(NbaGameFeatures.CurrentStreakDiff),
+        
+        nameof(NbaGameFeatures.HomeRestDays),
+        nameof(NbaGameFeatures.AwayRestDays),
+        nameof(NbaGameFeatures.RestDaysDiff),
+        
+        nameof(NbaGameFeatures.HomeBackToBack),
+        nameof(NbaGameFeatures.AwayBackToBack),
+    ];
+
+    protected abstract IEstimator<ITransformer> CreateTrainer(MLContext mlContext, TOptions options);
+    
+    public void TrainModel(IEnumerable<NbaGameTrainingData> trainingGames)
+    {
+        var trainingFeatures = ConvertToFeatures(trainingGames);
+        var trainingData = _mlContext.Data.LoadFromEnumerable(trainingFeatures);
+
+        var pipeline = BuildPipeline();
+        
+        _model = pipeline.Fit(trainingData);
+        
+        _predictionEngine = _mlContext.Model.CreatePredictionEngine<NbaGameFeatures, NbaGamePrediction>(_model);
+    }
+    
+    public NbaGamePrediction PredictGame(NbaGameTrainingData gameTrainingData)
+    {
+        if (_predictionEngine == null)
+            throw new InvalidOperationException("Model has not been trained yet. Call TrainModel first.");
+
+        var features = ConvertToFeatures([gameTrainingData]).First();
+        return _predictionEngine.Predict(features);
+    }
+    
+    private static IEnumerable<NbaGameFeatures> ConvertToFeatures(IEnumerable<NbaGameTrainingData> games)
+    {
+        return games.Select(game => new NbaGameFeatures
+        {
+            HomeTeamIdentifier = game.HomeIdentifier,
+            AwayTeamIdentifier = game.AwayIdentifier,
+            MatchupIdentifier = game.MatchupIdentifier,
+            HomeTeamWon = game.HomeTeamWon,
+            
+            EloDiff = game.HomeEloRating - game.AwayEloRating,
+            HomeEloRating = game.HomeEloRating,
+            AwayEloRating = game.AwayEloRating,
+            
+            HomeOdds = game.HomeOdds ?? float.NaN,
+            AwayOdds = game.AwayOdds ?? float.NaN,
+            OddsDiff = game.HomeOdds == null ? float.NaN : game.HomeOdds!.Value - game.AwayOdds!.Value,
+            
+            HomeTotalWinPercentage = game.HomeTotalWinPercentage,
+            AwayTotalWinPercentage = game.AwayTotalWinPercentage,
+            TotalWinPercentageDiff = game.HomeTotalWinPercentage - game.AwayTotalWinPercentage,
+            
+            HomeWinPercentageAtHome = game.HomeWinPercentageAtHome,
+            AwayWinPercentageWhenAway = game.AwayWinPercentageWhenAway,
+            
+            HomeLastTenGamesWinPercentage = game.HomeLastTenGamesWinPercentage,
+            AwayLastTenGamesWinPercentage = game.AwayLastTenGamesWinPercentage,
+            LastTenGamesWinPercentageDiff = game.HomeLastTenGamesWinPercentage - game.AwayLastTenGamesWinPercentage, 
+            
+            HomeOffensiveRating = game.HomeOffensiveRating,
+            AwayOffensiveRating = game.AwayOffensiveRating,
+            
+            HomeDefensiveRating = game.HomeDefensiveRating,
+            AwayDefensiveRating = game.AwayDefensiveRating,
+            
+            OffensiveRatingDiff = game.HomeOffensiveRating - game.AwayOffensiveRating,
+            DefensiveRatingDiff = game.HomeDefensiveRating - game.AwayDefensiveRating,
+            
+            HomeCurrentStreak = game.HomeCurrentStreak,
+            AwayCurrentStreak = game.AwayCurrentStreak,
+            CurrentStreakDiff = game.HomeCurrentStreak - game.AwayCurrentStreak,
+            
+            HomeRestDays = game.HomeRestDaysBeforeGame,
+            AwayRestDays = game.AwayRestDaysBeforeGame,
+            RestDaysDiff = game.HomeRestDaysBeforeGame - game.AwayRestDaysBeforeGame,
+            
+            HomeBackToBack = game.HomeBackToBack ? 1 : 0,
+            AwayBackToBack = game.AwayBackToBack ? 1 : 0
+        });
+    }
+
+    private IEstimator<ITransformer> BuildPipeline()
+    {
+        var transforms = new List<IEstimator<ITransformer>>();
+        var teamEncodingFeatures = new List<string>();
+
+        AddCategoryTransform(_classifierConfig.HomeTeamConfig, "HomeTeamEncoded", nameof(NbaGameFeatures.HomeTeamIdentifier));
+        AddCategoryTransform(_classifierConfig.AwayTeamConfig, "AwayTeamEncoded", nameof(NbaGameFeatures.AwayTeamIdentifier));
+        AddCategoryTransform(_classifierConfig.HomeTeamConfig, "MatchupEncoded", nameof(NbaGameFeatures.MatchupIdentifier));
+
+        var combinedFeatures = _features.Concat(teamEncodingFeatures).ToArray();
+        transforms.Add(_mlContext.Transforms.Concatenate("Features", combinedFeatures));
+    
+        var trainer = CreateTrainer(_mlContext, _options);
+        transforms.Add(trainer);
+    
+        return ChainEstimators(transforms);
+
+        void AddCategoryTransform(CategoryConfig? encodingConfig, string outputName, string featureName)
+        {
+            if (encodingConfig is null)
+                return;
+        
+            switch (encodingConfig.EncodingType)
+            {
+                case EncodingType.OneHotEncoding:
+                    transforms.Add(_mlContext.Transforms.Categorical.OneHotEncoding(outputName, featureName));
+                    break;
+                case EncodingType.OneHotHashEncoding:
+                    transforms.Add(_mlContext.Transforms.Categorical.OneHotHashEncoding(outputName, featureName, numberOfBits: encodingConfig.Bits));
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported encoding type");
+            } 
+        
+            teamEncodingFeatures.Add(outputName);
+        }
+    }
+
+    private static IEstimator<ITransformer> ChainEstimators(List<IEstimator<ITransformer>> estimators)
+    {
+        var pipeline = estimators[0];
+        
+        for (var i = 1; i < estimators.Count; i++)
+            pipeline = pipeline.Append(estimators[i]);
+        
+        return pipeline;
+    }
+}

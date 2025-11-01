@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="Unit\Providers\Games\Parsers\Games\month_schedule_example_html_data.txt" />
+    <None Remove="Unit\Providers\Games\Parsers\LineScore\line_score_example_html_data.txt" />
+    <None Remove="Unit\Providers\Teams\Parsers\PlayByPlay\play_by_play_example_html_data.txt" />
+    <None Remove="Unit\Providers\Teams\Parsers\PlayerSeasonStatistics\player_statistics_example_html_data.txt" />
+    <None Remove="Unit\Providers\Teams\Parsers\TeamMisc\team_misc_example_html_data.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentAssertions" Version="8.7.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="6.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="9.0.9" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
+    <PackageReference Include="SimpleInjector" Version="5.5.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="coverlet.collector" Version="6.0.4">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+      <PackageReference Include="SimpleInjector.Integration.ServiceCollection" Version="5.5.0" />
+      <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\NbaOracle\NbaOracle.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettingsTest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

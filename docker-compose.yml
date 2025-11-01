@@ -1,0 +1,68 @@
+version: '3.8'
+
+name: nba
+
+services:
+  mssql:
+    image: "mcr.microsoft.com/mssql/server:2025-latest"
+    container_name: nba_sqlserver25
+    ports:
+      - "14333:1433"
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=Password12
+      - MSSQL_PID=Developer
+    volumes:
+      - ./backups:/var/opt/mssql/backups
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P Password12 -Q 'SELECT 1' -C || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - sqlserver-network
+
+  restore-db:
+    build:
+      context: .
+      dockerfile: Dockerfile.restore
+    container_name: nba_restore
+    profiles:
+      - init
+    depends_on:
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./backups:/var/opt/mssql/backups
+    command: >
+      /bin/bash -c "
+      echo 'Unzipping backup file...' &&
+      unzip -o /var/opt/mssql/backups/nba.bak.zip -d /var/opt/mssql/backups/ &&
+      echo 'Backup file unzipped successfully' &&
+      /opt/mssql-tools18/bin/sqlcmd -S mssql -U sa -P Password12 -C -Q \"
+      IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'nba')
+      BEGIN
+        RESTORE DATABASE nba 
+        FROM DISK = '/var/opt/mssql/backups/nba.bak'
+        WITH 
+        MOVE 'nba' TO '/var/opt/mssql/data/nba.mdf',
+        MOVE 'nba_log' TO '/var/opt/mssql/data/nba_log.ldf',
+        REPLACE;
+        PRINT 'Database restored successfully';
+      END
+      ELSE
+        PRINT 'Database already exists, skipping restore';
+      \" &&
+      echo 'Cleaning up unzipped backup file...' &&
+      rm -f /var/opt/mssql/backups/nba.bak &&
+      echo 'Restore operation completed'
+      "
+    restart: "no"
+    networks:
+      - sqlserver-network
+
+networks:
+  sqlserver-network:
+    driver: bridge

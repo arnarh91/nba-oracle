@@ -1,0 +1,1 @@
+Invoke-Expression -Command "$PSScriptRoot\DeployLocal.ps1 -DropFirst"
