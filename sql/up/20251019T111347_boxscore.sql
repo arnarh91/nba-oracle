@@ -68,18 +68,18 @@ create table nba.GamePlayerAdvancedBoxScore ( Id                           int  
                                             , GameBoxScoreId               int            not null
                                             , PlayerId                     int            not null
                                             , TeamIdentifier               char (3)       not null
-                                            , TrueShootingPercentage       decimal (6, 5) not null
-                                            , EffectiveFieldGoalPercentage decimal (6, 5) not null
-                                            , ThreePointAttemptRate        decimal (6, 5) not null
-                                            , FreeThrowsAttemptRate        decimal (6, 5) not null
-                                            , OffensiveReboundPercentage   decimal (6, 5) not null
-                                            , DefensiveReboundPercentage   decimal (6, 5) not null
-                                            , TotalReboundPercentage       decimal (6, 5) not null
-                                            , AssistPercentage             decimal (6, 5) not null
-                                            , StealPercentage              decimal (6, 5) not null
-                                            , BlockPercentage              decimal (6, 5) not null
-                                            , TurnoverPercentage           decimal (6, 5) not null
-                                            , UsagePercentage              decimal (6, 5) not null
+                                            , TrueShootingPercentage       decimal (8, 6) not null
+                                            , EffectiveFieldGoalPercentage decimal (8, 6) not null
+                                            , ThreePointAttemptRate        decimal (8, 6) not null
+                                            , FreeThrowsAttemptRate        decimal (8, 6) not null
+                                            , OffensiveReboundPercentage   decimal (8, 6) not null
+                                            , DefensiveReboundPercentage   decimal (8, 6) not null
+                                            , TotalReboundPercentage       decimal (8, 6) not null
+                                            , AssistPercentage             decimal (8, 6) not null
+                                            , StealPercentage              decimal (8, 6) not null
+                                            , BlockPercentage              decimal (8, 6) not null
+                                            , TurnoverPercentage           decimal (8, 6) not null
+                                            , UsagePercentage              decimal (8, 6) not null
                                             , OffensiveRating              int            not null
                                             , DefensiveRating              int            not null
                                             , BoxPlusMinus                 decimal (6, 2) not null );
@@ -102,11 +102,11 @@ create type nba.tt_Merge_GameQuarterScore as table ( GameBoxScoreId int         
                                                    , HomeScore      int         not null
                                                    , AwayScore      int         not null );
 
-create type nba.tt_Merge_GameDidNotPlay as table ( GameBoxScoreId  int           not null
-                                                 , TeamIdentifier  char (3)      not null
-                                                 , SeasonStartYear int           not null
+create type nba.tt_Merge_GameDidNotPlay as table ( GameBoxScoreId  int            not null
+                                                 , TeamIdentifier  char (3)       not null
+                                                 , SeasonStartYear int            not null
                                                  , PlayerName      nvarchar (128) not null
-                                                 , Reason          varchar (128) not null );
+                                                 , Reason          varchar (128)  not null );
 
 create type nba.tt_Merge_GamePlayerBasicBoxScore as table ( GameBoxScoreId         int            not null
                                                           , TeamIdentifier         char (3)       not null
@@ -134,18 +134,18 @@ create type nba.tt_Merge_GamePlayerBasicBoxScore as table ( GameBoxScoreId      
 create type nba.tt_Merge_GamePlayerAdvancedBoxScore as table ( GameBoxScoreId               int            not null
                                                              , TeamIdentifier               char (3)       not null
                                                              , PlayerName                   nvarchar (128) not null
-                                                             , TrueShootingPercentage       decimal (6, 5) not null
-                                                             , EffectiveFieldGoalPercentage decimal (6, 5) not null
-                                                             , ThreePointAttemptRate        decimal (6, 5) not null
-                                                             , FreeThrowsAttemptRate        decimal (6, 5) not null
-                                                             , OffensiveReboundPercentage   decimal (6, 5) not null
-                                                             , DefensiveReboundPercentage   decimal (6, 5) not null
-                                                             , TotalReboundPercentage       decimal (6, 5) not null
-                                                             , AssistPercentage             decimal (6, 5) not null
-                                                             , StealPercentage              decimal (6, 5) not null
-                                                             , BlockPercentage              decimal (6, 5) not null
-                                                             , TurnoverPercentage           decimal (6, 5) not null
-                                                             , UsagePercentage              decimal (6, 5) not null
+                                                             , TrueShootingPercentage       decimal (8, 6) not null
+                                                             , EffectiveFieldGoalPercentage decimal (8, 6) not null
+                                                             , ThreePointAttemptRate        decimal (8, 6) not null
+                                                             , FreeThrowsAttemptRate        decimal (8, 6) not null
+                                                             , OffensiveReboundPercentage   decimal (8, 6) not null
+                                                             , DefensiveReboundPercentage   decimal (8, 6) not null
+                                                             , TotalReboundPercentage       decimal (8, 6) not null
+                                                             , AssistPercentage             decimal (8, 6) not null
+                                                             , StealPercentage              decimal (8, 6) not null
+                                                             , BlockPercentage              decimal (8, 6) not null
+                                                             , TurnoverPercentage           decimal (8, 6) not null
+                                                             , UsagePercentage              decimal (8, 6) not null
                                                              , OffensiveRating              int            not null
                                                              , DefensiveRating              int            not null
                                                              , BoxPlusMinus                 decimal (6, 2) not null );
