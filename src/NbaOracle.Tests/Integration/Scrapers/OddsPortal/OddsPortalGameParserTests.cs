@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
 using NbaOracle.ValueObjects;
@@ -24,22 +25,22 @@ public class OddsPortalGameParserTests : IntegrationTestBase
     [InlineData(2014)]
     public async Task Scrape(int seasonStartYear)
     {
-        await ExecuteTest(async c =>
-        {
-            var season = new Season(seasonStartYear);
-            
-            var gameLoader = c.GetInstance<GameLoader>(); 
-            var scraper = c.GetInstance<OddsPortalGameHtmlScraper>();
-            var parser = c.GetInstance<OddsPortalGameParser>();
-            var repository = c.GetInstance<GameBettingOddsRepository>();
-            
-            var games =  await gameLoader.GetGames(season);
-            await scraper.Scrape(season);
-            var oddsPortalGames = await parser.Parse(season);
+        await using var scope = CreateScope();
+        var sp = scope.ServiceProvider;
+        
+        var season = new Season(seasonStartYear);
+        
+        var gameLoader = sp.GetRequiredService<GameLoader>(); 
+        var scraper = sp.GetRequiredService<OddsPortalGameHtmlScraper>();
+        var parser = sp.GetRequiredService<OddsPortalGameParser>();
+        var repository = sp.GetRequiredService<GameBettingOddsRepository>();
+        
+        var games =  await gameLoader.GetGames(season);
+        await scraper.Scrape(season);
+        var oddsPortalGames = await parser.Parse(season);
 
-            var adapter = new OddsPortalGameBettingOddsAdapter();
-            var gameBettingOdds = adapter.Adapt(games, oddsPortalGames, DateTime.UtcNow);
-            await repository.Merge(gameBettingOdds);
-        });
+        var adapter = new OddsPortalGameBettingOddsAdapter();
+        var gameBettingOdds = adapter.Adapt(games, oddsPortalGames, DateTime.UtcNow);
+        await repository.Merge(gameBettingOdds);
     }
 }

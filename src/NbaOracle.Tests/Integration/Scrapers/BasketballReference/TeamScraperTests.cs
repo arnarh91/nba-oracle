@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.TeamStatistics;
 using NbaOracle.ValueObjects;
 using NbaOracle.WebScrapers.BasketballReference.Teams;
@@ -38,22 +39,22 @@ public class TeamScraperTests : IntegrationTestBase
     {
         var season = new Season(seasonStartYear);
 
-        await ExecuteTest(async c =>
+        await using var scope = CreateScope();
+        var sp = scope.ServiceProvider;
+    
+        var scraper = sp.GetRequiredService<TeamScraper>();
+
+        var teams = TeamsFactory.GetTeamsBySeason(season);
+        foreach (var team in teams)
         {
-            var scraper = c.GetInstance<TeamScraper>();
+            var teamData = await scraper.Scrape(team, season);
 
-            var teams = TeamsFactory.GetTeamsBySeason(season);
-            foreach (var team in teams)
-            {
-                var teamData = await scraper.Scrape(team, season);
+            var teamInformation = TeamAdapter.Adapt(team, season, teamData);
 
-                var teamInformation = TeamAdapter.Adapt(team, season, teamData);
+            var repository = sp.GetRequiredService<TeamStatisticsRepository>();
+            await repository.Merge(teamInformation);
 
-                var repository = c.GetInstance<TeamStatisticsRepository>();
-                await repository.Merge(teamInformation);
-
-                _output.WriteLine($"Processed team data - {team.Identifier} ({season.SeasonStartYear}-{season.SeasonEndYear})");
-            }
-        });
+            _output.WriteLine($"Processed team data - {team.Identifier} ({season.SeasonStartYear}-{season.SeasonEndYear})");
+        }
     }
 }

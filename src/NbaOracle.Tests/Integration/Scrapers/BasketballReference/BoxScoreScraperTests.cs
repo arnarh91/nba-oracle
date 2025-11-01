@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.Games;
 using NbaOracle.ValueObjects;
 using NbaOracle.WebScrapers.BasketballReference.Games.BoxScores;
@@ -11,31 +12,32 @@ namespace NbaOracle.Tests.Integration.Scrapers.BasketballReference;
 public class BoxScoreScraperTests : IntegrationTestBase
 {
     [Theory]
-    //[InlineData(2024)]
-    [InlineData(2023)]
+    // [InlineData(2024)]
+    // [InlineData(2023)]
+    [InlineData(2022)]
     public async Task Provider(int seasonStartYear)
     {
         var season = new Season(seasonStartYear);
-            
-        await ExecuteTest(async c =>
+        
+        await using var scope = CreateScope();
+        var sp = scope.ServiceProvider;
+         
+        var gameLoader = sp.GetRequiredService<GameLoader>();
+        var boxScoreScraper = sp.GetRequiredService<BoxScoreScraper>();
+
+        var games = await gameLoader.GetGames(season);
+        //games = games.Take(1).ToList();
+
+        var boxScores = new List<BoxScoreData>();
+        foreach (var game in games)
         {
-            var gameLoader = c.GetInstance<GameLoader>();
-            var boxScoreScraper = c.GetInstance<BoxScoreScraper>();
+            boxScores.Add(await boxScoreScraper.Scrape(season, new BoxScoreLink(game.BoxScoreLink)));
+        }
 
-            var games = await gameLoader.GetGames(season);
-            //games = games.Take(1).ToList();
+        var gameBoxScores = BoxScoreAdapter.Adapt(boxScores, games, season);
 
-            var boxScores = new List<BoxScoreData>();
-            foreach (var game in games)
-            {
-                boxScores.Add(await boxScoreScraper.Scrape(season, new BoxScoreLink(game.BoxScoreLink)));
-            }
+        var repository = sp.GetRequiredService<GameBoxScoreRepository>();
 
-            var gameBoxScores = BoxScoreAdapter.Adapt(boxScores, games, season);
-
-            var repository = c.GetInstance<GameBoxScoreRepository>();
-
-            await repository.Merge(gameBoxScores);
-        });
+        await repository.Merge(gameBoxScores);
     }
 }

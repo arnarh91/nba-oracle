@@ -12,6 +12,9 @@
     <None Remove="Unit\Providers\Teams\Parsers\PlayByPlay\play_by_play_example_html_data.txt" />
     <None Remove="Unit\Providers\Teams\Parsers\PlayerSeasonStatistics\player_statistics_example_html_data.txt" />
     <None Remove="Unit\Providers\Teams\Parsers\TeamMisc\team_misc_example_html_data.txt" />
+    <None Update="appsettings.local.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup>
@@ -21,7 +24,6 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.FileExtensions" Version="9.0.9" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="9.0.9" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.0" />
-    <PackageReference Include="SimpleInjector" Version="5.5.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -31,7 +33,6 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-      <PackageReference Include="SimpleInjector.Integration.ServiceCollection" Version="5.5.0" />
       <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.9" />
   </ItemGroup>
 
@@ -40,7 +41,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettingsTest.json">
+    <None Update="appsettings.test.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.Games;
 using NbaOracle.ValueObjects;
 using NbaOracle.WebScrapers.BasketballReference.Games.Results;
@@ -28,25 +29,25 @@ public class GameScraperTests : IntegrationTestBase
     [InlineData(2009)]
     public async Task ProcessData(int seasonStartYear)
     {
+        await using var scope = CreateScope();
+        var sp = scope.ServiceProvider;
+        
         var season = new Season(seasonStartYear);
 
-        await ExecuteTest(async c =>
+        var scraper = sp.GetRequiredService<GameScraper>();
+        var repository = sp.GetRequiredService<GameRepository>();
+
+        var allGames = new List<GameData>();
+
+        foreach (var month in season.GetMonthsInSeason())
         {
-            var scraper = c.GetInstance<GameScraper>();
-            var repository = c.GetInstance<GameRepository>();
+            var scrapedGames = await scraper.Scrape(season, month);
 
-            var allGames = new List<GameData>();
+            allGames.AddRange(scrapedGames);
+        }
 
-            foreach (var month in season.GetMonthsInSeason())
-            {
-                var scrapedGames = await scraper.Scrape(season, month);
-
-                allGames.AddRange(scrapedGames);
-            }
-
-            var games = GameAdapter.Adapt(allGames);
-            
-            await repository.Merge(season, games);
-        });
+        var games = GameAdapter.Adapt(allGames);
+        
+        await repository.Merge(season, games);
     }
 }
