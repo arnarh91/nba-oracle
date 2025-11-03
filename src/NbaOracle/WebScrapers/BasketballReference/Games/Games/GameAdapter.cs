@@ -2,7 +2,7 @@
 using System.Linq;
 using NbaOracle.Data.Games;
 
-namespace NbaOracle.WebScrapers.BasketballReference.Games.Results;
+namespace NbaOracle.WebScrapers.BasketballReference.Games.Games;
 
 public class GameAdapter
 {

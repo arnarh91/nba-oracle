@@ -5,7 +5,7 @@ using AngleSharp;
 using NbaOracle.Infrastructure.FileSystem;
 using NbaOracle.ValueObjects;
 
-namespace NbaOracle.WebScrapers.BasketballReference.Games.Results;
+namespace NbaOracle.WebScrapers.BasketballReference.Games.Games;
 
 public class GameScraper
 {

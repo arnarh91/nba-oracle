@@ -8,14 +8,17 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
+using NbaOracle.Data.Injuries;
 using NbaOracle.Data.TeamStatistics;
 using NbaOracle.Infrastructure.FileSystem;
 using NbaOracle.Infrastructure.Http;
 using NbaOracle.Infrastructure.Persistence;
+using NbaOracle.WebScrapers;
 using NbaOracle.WebScrapers.BasketballReference;
 using NbaOracle.WebScrapers.BasketballReference.Games.BoxScores;
-using NbaOracle.WebScrapers.BasketballReference.Games.Results;
+using NbaOracle.WebScrapers.BasketballReference.Games.Games;
 using NbaOracle.WebScrapers.BasketballReference.Teams;
+using NbaOracle.WebScrapers.Espn;
 using NbaOracle.WebScrapers.OddsPortal;
 
 namespace NbaOracle.Tests.Integration;
@@ -34,6 +37,7 @@ public abstract class IntegrationTestBase
             
         var baseDirectoryPath = configuration["BaseDirectoryPath"];
         var basketballReferenceBaseUrl = configuration["BasketballReferenceBaseUrl"];
+        var espnBaseUrl = configuration["EspnBaseUrl"];
         var oddsPortalBaseUrl = configuration["OddsPortalBaseUrl"];
 
         if (string.IsNullOrWhiteSpace(baseDirectoryPath))
@@ -62,6 +66,16 @@ public abstract class IntegrationTestBase
         })
         .AddHttpMessageHandler<RateLimitingHandler>();
         
+        serviceCollection.AddHttpClient<EspnHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri(espnBaseUrl!);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        
+            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.5");
+        });
+        
         serviceCollection.AddSingleton(new TeamOptions(basketballReferenceBaseUrl!, baseDirectoryPath!));
         serviceCollection.AddScoped<TeamScraper>();
         
@@ -74,6 +88,9 @@ public abstract class IntegrationTestBase
         
         serviceCollection.AddSingleton(new BoxScoreOptions(baseDirectoryPath));
         serviceCollection.AddScoped<BoxScoreScraper>();
+
+        serviceCollection.AddSingleton(new InjuryOptions(@"C:\Users\Lenovo\Documents\Arnar\Nba\html\injuries\report.html"));
+        serviceCollection.AddScoped<InjuriesScraper>();
         
         // Persistence
         serviceCollection.AddScoped<TeamStatisticsRepository>();
@@ -83,6 +100,8 @@ public abstract class IntegrationTestBase
         
         serviceCollection.AddScoped<GameLoader>();
         serviceCollection.AddScoped<GameBettingOddsLoader>();
+
+        serviceCollection.AddScoped<InjuryReportRepository>();
         
         _serviceProvider = serviceCollection.BuildServiceProvider();
     }

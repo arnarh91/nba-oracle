@@ -7,7 +7,7 @@ using NbaOracle.ValueObjects;
 using NbaOracle.WebScrapers.OddsPortal;
 using Xunit;
 
-namespace NbaOracle.Tests.Integration.Scrapers.OddsPortal;
+namespace NbaOracle.Tests.Integration.WebScrapers.OddsPortal;
 
 public class OddsPortalGameParserTests : IntegrationTestBase
 {

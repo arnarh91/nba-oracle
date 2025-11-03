@@ -2,7 +2,7 @@
 using AngleSharp.Dom;
 using NbaOracle.Infrastructure.AngleSharp;
 
-namespace NbaOracle.WebScrapers.BasketballReference.Games.Results;
+namespace NbaOracle.WebScrapers.BasketballReference.Games.Games;
 
 public static class GameParser
 {

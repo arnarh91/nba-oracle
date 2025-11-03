@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace NbaOracle.ValueObjects
 {
@@ -13,6 +14,11 @@ namespace NbaOracle.ValueObjects
             SeasonEndYear = seasonStartYear + 1;
         }
 
+        public bool IsCurrentSeason(DateTime referenceDate)
+        {
+            return (referenceDate.Year == SeasonStartYear && referenceDate.Year + 1 == SeasonEndYear) || (referenceDate.Year == SeasonEndYear && referenceDate.Year - 1 == SeasonStartYear); 
+        }
+        
         public IReadOnlyList<Month> GetMonthsInSeason()
         {
             return SeasonStartYear switch

@@ -23,6 +23,12 @@ public class Team : ValueObject
     public static string GetIdentifierByName(string name)
         => TeamsByName[name];
 
+    public static Team GetTeamByIdentifier(string identifier)
+    {
+        var name = TeamsByKeyIdentifier[identifier];
+        return new Team(name, identifier);
+    }
+
     public static string? GetIdentifierByNameOrNull(string name)
     {
         return TeamsByName.GetValueOrDefault(name);

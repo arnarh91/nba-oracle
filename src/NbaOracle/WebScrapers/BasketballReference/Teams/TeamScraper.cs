@@ -23,14 +23,21 @@ public class TeamScraper
 
     public async Task<TeamData> Scrape(Team team, Season season)
     {
-        var filePath = _options.GetFilePath(team, season);
-
-        var htmlContent = await _fileSystem.GetFileContent(filePath);
-        if (htmlContent is null)
+        var shouldCache = !season.IsCurrentSeason(DateTime.Today);
+        string? htmlContent;
+        if (shouldCache)
         {
-            htmlContent = await _httpClient.Get(_options.GetRequestUri(team, season));
-            await _fileSystem.SaveFileContent(filePath, htmlContent);
+            var filePath = _options.GetFilePath(team, season);
+
+            htmlContent = await _fileSystem.GetFileContent(filePath);
+            if (htmlContent is null)
+            {
+                htmlContent = await _httpClient.Get(_options.GetRequestUri(team, season));
+                await _fileSystem.SaveFileContent(filePath, htmlContent);
+            }            
         }
+        else 
+            htmlContent = await _httpClient.Get(_options.GetRequestUri(team, season));
         
         var document = await _browsingContext.OpenAsync(request => { request.Content(htmlContent); });
 

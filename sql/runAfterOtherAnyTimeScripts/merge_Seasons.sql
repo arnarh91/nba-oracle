@@ -141,7 +141,16 @@ using ( select 2009
              , null
              , null
              , 'OKC'
-             , 'IND' ) as source ( StartYear, EndYear, RegularSeasonStartDate, RegularSeasonEndDate, PlayoffStartDate, PlayoffEndDate, FinalsWinnerTeamIdentifier, FinalsLoserTeamIdentifier )
+             , 'IND'
+        union
+        select 2025
+             , 2026
+             , '2025-10-21'
+             , null
+             , null
+             , null
+             , null
+             , null ) as source ( StartYear, EndYear, RegularSeasonStartDate, RegularSeasonEndDate, PlayoffStartDate, PlayoffEndDate, FinalsWinnerTeamIdentifier, FinalsLoserTeamIdentifier )
 on ( target.StartYear = source.StartYear )
 when matched then update set StartYear = source.StartYear
                            , EndYear = source.EndYear

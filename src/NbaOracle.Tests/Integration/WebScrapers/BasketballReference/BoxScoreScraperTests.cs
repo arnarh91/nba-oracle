@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.Games;
@@ -7,7 +6,7 @@ using NbaOracle.ValueObjects;
 using NbaOracle.WebScrapers.BasketballReference.Games.BoxScores;
 using Xunit;
 
-namespace NbaOracle.Tests.Integration.Scrapers.BasketballReference;
+namespace NbaOracle.Tests.Integration.WebScrapers.BasketballReference;
 
 public class BoxScoreScraperTests : IntegrationTestBase
 {
