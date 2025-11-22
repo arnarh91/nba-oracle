@@ -26,7 +26,7 @@ public class PredictionPerformanceTracker
     }
 }
 
-public record GamePredictionResult(int GameId, string WinTeam, string PredictedWinTeam, float? Confidence)
+public record GamePredictionResult(int GameId, string WinTeam, string PredictedWinTeam, double Confidence)
 {
     public override string ToString()
     {

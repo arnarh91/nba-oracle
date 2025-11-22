@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Microsoft.ML.Trainers.FastTree;
 using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
-using NbaOracle.Predictions.Classifiers;
 using NbaOracle.Predictions.Elo;
+using NbaOracle.Predictions.Glicko;
 
 namespace NbaOracle.Predictions;
 
@@ -13,12 +12,14 @@ public record GameInfo(Game Game, GameBettingOdds? Odds);
 
 public class NbaHistoricalModel
 {
-    private readonly IEloCalculator _eloCalculator; 
+    public IEloCalculator EloCalculator { get; }
+    public IGlickoCalculator GlickoCalculator { get; }
     private readonly Dictionary<string, TeamStatistics> _teams;
     
-    public NbaHistoricalModel(IEloCalculator eloCalculator, HashSet<string> teamIdentifiers)
+    public NbaHistoricalModel(IEloCalculator eloCalculator, IGlickoCalculator glickoCalculator, HashSet<string> teamIdentifiers)
     {
-        _eloCalculator = eloCalculator;
+        EloCalculator = eloCalculator;
+        GlickoCalculator = glickoCalculator;
         
         _teams = new Dictionary<string, TeamStatistics>();
 
@@ -32,7 +33,7 @@ public class NbaHistoricalModel
     public NbaHistoricalModel Copy()
     {
         var teamIdentifiers = _teams.Keys.ToHashSet();
-        var model = new NbaHistoricalModel(_eloCalculator, teamIdentifiers);
+        var model = new NbaHistoricalModel(EloCalculator, GlickoCalculator, teamIdentifiers);
         
         foreach (var team in model._teams)
         {
@@ -47,13 +48,6 @@ public class NbaHistoricalModel
         return _teams[teamIdentifier];
     }
     
-    public EloRating GetPreviousRating(string teamIdentifier, DateOnly gameDate)
-    {
-        var team = _teams[teamIdentifier];
-        var scoreByDate = team.EloRatings.Where(x => x.Date < gameDate).OrderByDescending(x => x.Date).First();
-        return scoreByDate;
-    }
-
     public void Evolve(GameInfo gameInfo)
     {
         var game = gameInfo.Game;
@@ -61,10 +55,13 @@ public class NbaHistoricalModel
         var home = _teams[game.HomeTeam];
         var away = _teams[game.AwayTeam];
         
-        var (updatedHomeEloRating, updatedAwayEloRating) = _eloCalculator.Calculate(home, away, game);
+        var (homeEloRating, awayEloRating) = EloCalculator.Calculate(home, away, game);
         
-        home.AddGame(game, updatedHomeEloRating);
-        away.AddGame(game, updatedAwayEloRating);
+        var homeGlickoRating = GlickoCalculator.CalculateRating(home.GlickoScore, away.GlickoScore, game); 
+        var awayGlickoRating = GlickoCalculator.CalculateRating(away.GlickoScore, home.GlickoScore, game);
+        
+        home.AddGame(game, homeEloRating, homeGlickoRating);
+        away.AddGame(game, awayEloRating, awayGlickoRating);
     }
     
     public void Regress(double mean = 1500.0, double regressionFactor = 0.75) 
@@ -83,8 +80,10 @@ public class TeamStatistics
     public TeamStatistics(string teamIdentifier)
     {
         TeamIdentifier = teamIdentifier;
+        
         EloRating = 1500;
         EloRatings = [new EloRating(DateOnly.MinValue, EloRating)];
+        GlickoScore = new GlickoScore(teamIdentifier);
     }
 
     public string TeamIdentifier { get; set; }
@@ -95,6 +94,8 @@ public class TeamStatistics
     public double EloMomentum5Games { get; set; }
     public double EloMomentum10Games { get; set; }
     public List<EloRating> EloRatings { get; }
+    
+    public GlickoScore GlickoScore { get; }
     
     public int Streak { get; set; }
     
@@ -121,13 +122,15 @@ public class TeamStatistics
     
     public int RestDays { get; private set; }
     
-    public void AddGame(Game game, double eloRating)
+    public void AddGame(Game game, double eloRating, GlickoRating glickoRating)
     {
         SetRestDays(game);
         LastGameDate = game.GameDate;
 
         SetCurrentStreak(game);
         SetEloRating(game, eloRating);
+        
+        SetGlickoRating(game, glickoRating);
 
         SetHomeWins(game);
         SetAwayWins(game);
@@ -184,6 +187,14 @@ public class TeamStatistics
         
         var last10 = EloRatings.OrderByDescending(x => x.Date).Skip(10).FirstOrDefault();
         EloMomentum10Games = EloRating - last10?.Rating ?? 0.0;
+    }
+    
+    private void SetGlickoRating(Game game, GlickoRating glicko)
+    {
+        GlickoScore.Rating = glicko.Rating;
+        GlickoScore.RatingDeviation = glicko.RatingDeviation;
+        GlickoScore.Volatility = glicko.Volatility;
+        GlickoScore.LastGameDate = game.GameDate;
     }
     
     private void SetCurrentStreak(Game game)

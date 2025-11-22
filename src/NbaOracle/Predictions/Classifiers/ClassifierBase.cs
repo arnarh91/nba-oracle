@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.ML;
+using Microsoft.ML.Data;
 using Microsoft.ML.Trainers;
+using Microsoft.ML.Trainers.FastTree;
 using NbaOracle.Predictions.Elo;
 
 // ReSharper disable ConvertToPrimaryConstructor
@@ -32,55 +34,6 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
         _classifierConfig = classifierConfig;
         _mlContext = new MLContext(classifierConfig.Seed);
     }
-    
-    public static readonly string[] AllFeatures =
-    [
-        nameof(NbaGameFeatures.HomeEloRating),
-        nameof(NbaGameFeatures.AwayEloRating),
-        nameof(NbaGameFeatures.EloDiff),
-    
-        nameof(NbaGameFeatures.HomeEloMomentum5Games),
-        nameof(NbaGameFeatures.AwayEloMomentum5Games),
-        nameof(NbaGameFeatures.EloMomentum5GamesDiff),
-        
-        nameof(NbaGameFeatures.HomeEloMomentum10Games),
-        nameof(NbaGameFeatures.AwayEloMomentum10Games),
-        nameof(NbaGameFeatures.EloMomentum10GamesDiff),
-        
-        nameof(NbaGameFeatures.HomeTotalWinPercentage),
-        nameof(NbaGameFeatures.AwayTotalWinPercentage),
-        nameof(NbaGameFeatures.TotalWinPercentageDiff),
-    
-        nameof(NbaGameFeatures.HomeOdds),
-        nameof(NbaGameFeatures.AwayOdds),
-        nameof(NbaGameFeatures.OddsDiff),
-        
-        nameof(NbaGameFeatures.HomeWinPercentageAtHome),
-        nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
-        
-        nameof(NbaGameFeatures.HomeLastTenGamesWinPercentage),
-        nameof(NbaGameFeatures.AwayLastTenGamesWinPercentage),
-        nameof(NbaGameFeatures.LastTenGamesWinPercentageDiff),
-        
-        nameof(NbaGameFeatures.HomeOffensiveRating),
-        nameof(NbaGameFeatures.AwayOffensiveRating),
-        nameof(NbaGameFeatures.OffensiveRatingDiff),
-        
-        nameof(NbaGameFeatures.HomeDefensiveRating),
-        nameof(NbaGameFeatures.AwayDefensiveRating),
-        nameof(NbaGameFeatures.DefensiveRatingDiff),
-        
-        nameof(NbaGameFeatures.HomeCurrentStreak),
-        nameof(NbaGameFeatures.AwayCurrentStreak),
-        nameof(NbaGameFeatures.CurrentStreakDiff),
-        
-        nameof(NbaGameFeatures.HomeRestDays),
-        nameof(NbaGameFeatures.AwayRestDays),
-        nameof(NbaGameFeatures.RestDaysDiff),
-        
-        nameof(NbaGameFeatures.HomeBackToBack),
-        nameof(NbaGameFeatures.AwayBackToBack),
-    ];
 
     protected abstract IEstimator<ITransformer> CreateTrainer(MLContext mlContext, TOptions options);
     
@@ -95,7 +48,7 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
         
         _predictionEngine = _mlContext.Model.CreatePredictionEngine<NbaGameFeatures, NbaGamePrediction>(_model);
     }
-    
+
     public NbaGamePrediction PredictGame(NbaGameTrainingData gameTrainingData)
     {
         if (_predictionEngine == null)
@@ -125,6 +78,26 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
             HomeEloMomentum10Games = game.HomeEloMomentum10Games,
             AwayEloMomentum10Games = game.AwayEloMomentum10Games,
             EloMomentum10GamesDiff = game.HomeEloMomentum10Games - game.AwayEloMomentum10Games,
+            
+            HomeEloProbability = game.HomeEloProbability,
+            AwayEloProbability = game.AwayEloProbability,
+            EloProbabilityDiff = game.HomeEloProbability - game.AwayEloProbability, 
+            
+            HomeGlickoRating = game.HomeGlickoRating,
+            AwayGlickoRating = game.AwayGlickoRating,
+            GlickoRatingDiff = game.HomeGlickoRating - game.AwayGlickoRating,
+            
+            HomeGlickoRatingDeviation = game.HomeGlickoRatingDeviation,
+            AwayGlickoRatingDeviation = game.AwayGlickoRatingDeviation,
+            GlickoRatingDeviationDiff = game.HomeGlickoRatingDeviation - game.AwayGlickoRatingDeviation,
+            
+            HomeGlickoVolatility = game.HomeGlickoVolatility,
+            AwayGlickoVolatility = game.AwayGlickoVolatility,
+            GlickoVolatilityDiff = game.HomeGlickoVolatility - game.AwayGlickoVolatility,
+            
+            HomeGlickoProbability = game.HomeGlickoProbability,
+            AwayGlickoProbability = game.AwayGlickoProbability,
+            GlickoProbabilityDiff = game.HomeGlickoProbability - game.AwayGlickoProbability, 
             
             HomeOdds = game.HomeOdds ?? float.NaN,
             AwayOdds = game.AwayOdds ?? float.NaN,

@@ -18,6 +18,21 @@ public class NbaGameTrainingData
     
     public float HomeEloMomentum10Games { get; set; }
     public float AwayEloMomentum10Games { get; set; }
+
+    public float HomeEloProbability { get; set; }
+    public float AwayEloProbability { get; set; }
+    
+    public float HomeGlickoRating { get; set; }
+    public float AwayGlickoRating { get; set; }
+    
+    public float HomeGlickoRatingDeviation { get; set; }
+    public float AwayGlickoRatingDeviation { get; set; }
+    
+    public float HomeGlickoVolatility { get; set; }
+    public float AwayGlickoVolatility { get; set; }
+    
+    public float HomeGlickoProbability { get; set; }
+    public float AwayGlickoProbability { get; set; }
     
     public float? HomeOdds { get; set; }
     public float? AwayOdds { get; set; }
@@ -63,6 +78,26 @@ public class NbaGameFeatures
     public required float HomeEloMomentum10Games { get; set; }
     public required float AwayEloMomentum10Games { get; set; }
     public required float EloMomentum10GamesDiff { get; set; }
+    
+    public required float HomeEloProbability { get; set; }
+    public required float AwayEloProbability { get; set; }
+    public required float EloProbabilityDiff { get; set; }
+    
+    public required float HomeGlickoRating { get; set; }
+    public required float AwayGlickoRating { get; set; }
+    public required float GlickoRatingDiff { get; set; }
+    
+    public required  float HomeGlickoRatingDeviation { get; set; }
+    public required float AwayGlickoRatingDeviation { get; set; }
+    public required float GlickoRatingDeviationDiff { get; set; }
+    
+    public required float HomeGlickoVolatility { get; set; }
+    public required float AwayGlickoVolatility { get; set; }
+    public required float GlickoVolatilityDiff { get; set; }
+    
+    public required float HomeGlickoProbability { get; set; }
+    public required float AwayGlickoProbability { get; set; }
+    public required float GlickoProbabilityDiff { get; set; }
     
     public float HomeOdds { get; set; }
     public float AwayOdds { get; set; }

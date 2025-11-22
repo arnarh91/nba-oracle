@@ -4,11 +4,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.ML.Trainers.FastTree;
+using Microsoft.ML.Trainers.LightGbm;
 using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
 using NbaOracle.Predictions;
 using NbaOracle.Predictions.Classifiers;
 using NbaOracle.Predictions.Elo;
+using NbaOracle.Predictions.Glicko;
 using NbaOracle.ValueObjects;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +28,7 @@ public class NbaPredictorTests : IntegrationTestBase
     }
     
     [Fact]
-    public async Task Predict_2024()
+    public async Task LightGbm()
     {
         await using var scope = CreateScope();
         var sp = scope.ServiceProvider;
@@ -40,7 +42,7 @@ public class NbaPredictorTests : IntegrationTestBase
             "MIA", "MIL", "MIN", "NOP", "NYK", "OKC", "ORL", "PHI", "PHO", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
         ];
 
-        var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), teams);
+        var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), new Glicko2Calculator(), teams);
         
         int[] trainingSeasons = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
         var trainingDataSet = new TrainingDataSet();
@@ -61,45 +63,97 @@ public class NbaPredictorTests : IntegrationTestBase
 
         string[] features =
         [
+            nameof(NbaGameFeatures.HomeEloRating),
+            nameof(NbaGameFeatures.AwayEloRating),
             nameof(NbaGameFeatures.EloDiff),
-
+            
+            nameof(NbaGameFeatures.HomeEloMomentum5Games),
+            nameof(NbaGameFeatures.AwayEloMomentum5Games),
+            nameof(NbaGameFeatures.EloMomentum5GamesDiff),
+            
+            nameof(NbaGameFeatures.HomeEloMomentum10Games),
+            nameof(NbaGameFeatures.AwayEloMomentum10Games),
+            nameof(NbaGameFeatures.EloMomentum10GamesDiff),
+            
+            nameof(NbaGameFeatures.HomeEloProbability),
+            nameof(NbaGameFeatures.AwayEloProbability),
+            nameof(NbaGameFeatures.EloProbabilityDiff),
+            
+            nameof(NbaGameFeatures.HomeGlickoRating),
+            nameof(NbaGameFeatures.AwayGlickoRating),
+            nameof(NbaGameFeatures.GlickoRatingDiff),
+            
+            nameof(NbaGameFeatures.HomeGlickoRatingDeviation),
+            nameof(NbaGameFeatures.AwayGlickoRatingDeviation),
+            nameof(NbaGameFeatures.GlickoRatingDeviationDiff),
+            
+            nameof(NbaGameFeatures.HomeGlickoVolatility),
+            nameof(NbaGameFeatures.AwayGlickoVolatility),
+            nameof(NbaGameFeatures.GlickoVolatilityDiff),
+            
+            // nameof(NbaGameFeatures.HomeOdds),
+            // nameof(NbaGameFeatures.AwayOdds),
+            // nameof(NbaGameFeatures.OddsDiff),
+            
+            nameof(NbaGameFeatures.HomeTotalWinPercentage),
+            nameof(NbaGameFeatures.AwayTotalWinPercentage),
+            nameof(NbaGameFeatures.TotalWinPercentageDiff),
+            
             nameof(NbaGameFeatures.HomeWinPercentageAtHome),
             nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
-    
+            
+            nameof(NbaGameFeatures.HomeLastTenGamesWinPercentage),
+            nameof(NbaGameFeatures.AwayLastTenGamesWinPercentage),
+            nameof(NbaGameFeatures.LastTenGamesWinPercentageDiff),
+            
+            nameof(NbaGameFeatures.HomeOffensiveRating),
+            nameof(NbaGameFeatures.AwayOffensiveRating),
             nameof(NbaGameFeatures.OffensiveRatingDiff),
+            
+            nameof(NbaGameFeatures.HomeDefensiveRating),
+            nameof(NbaGameFeatures.AwayDefensiveRating),
             nameof(NbaGameFeatures.DefensiveRatingDiff),
-    
+            
+            nameof(NbaGameFeatures.HomeCurrentStreak),
+            nameof(NbaGameFeatures.AwayCurrentStreak),
+            nameof(NbaGameFeatures.CurrentStreakDiff),
+            
             nameof(NbaGameFeatures.HomeRestDays),
             nameof(NbaGameFeatures.AwayRestDays),
             nameof(NbaGameFeatures.RestDaysDiff),
-    
+            
             nameof(NbaGameFeatures.HomeBackToBack),
             nameof(NbaGameFeatures.AwayBackToBack),
         ];
 
-        var lightGbm = new LightGbmClassifier(LightGbmClassifier.DefaultOptions, ClassifierConfig.None, features);
-        var lightGbm_WithMatchup = new LightGbmClassifier(LightGbmClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
+        var options = new LightGbmBinaryTrainer.Options
+        {
+            NumberOfLeaves = 31,
+            MinimumExampleCountPerLeaf = 20,
+            LearningRate = 0.05,
+            NumberOfIterations = 200,
+            LabelColumnName = "Label",
+            FeatureColumnName = "Features",
+        };
         
-        lightGbm.TrainModel(trainingDataSet.TrainingGames);
-        lightGbm_WithMatchup.TrainModel(trainingDataSet.TrainingGames);
+        var lightGbm_CustomOptions = new LightGbmClassifier(options, ClassifierConfig.None, features);
+        //var fastForest_WithMatchup_CustomOptions = new FastForestClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
+        //var fastForest_WithAllCategories_CustomOptions = new FastForestClassifier(options, ClassifierConfig.All(CategoryConfig.OneHot(), CategoryConfig.OneHot(), CategoryConfig.OneHotHash()), features);
         
-        var fastForest = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.None, features);
-        var fastForest_WithMatchup = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
+        lightGbm_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        //fastForest_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        //fastForest_WithAllCategories_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
         
-        fastForest.TrainModel(trainingDataSet.TrainingGames);
-        fastForest_WithMatchup.TrainModel(trainingDataSet.TrainingGames);
-
         var classifiers = new List<(IPredictionEngine, PredictionPerformanceTracker)>
         {
-            // (lightGbm, new PredictionPerformanceTracker("LightGbm ")),
-            // (lightGbm_WithMatchup, new PredictionPerformanceTracker("LightGbm - With MatchupEncoding")),
-            
-            (fastForest, new PredictionPerformanceTracker("FastForest")),
-            (fastForest_WithMatchup, new PredictionPerformanceTracker("FastForest - With MatchupEncoding"))
+            (lightGbm_CustomOptions, new PredictionPerformanceTracker("LightGbm")),
+            //(fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With Matchup category")),
+            //(fastForest_WithAllCategories_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With all categories"))
         };
         
         var games2024 = await gameLoader.GetGames(new Season(2024));
-
+        var odds2024 = (await oddsLoader.GetOdds(new Season(2024))).ToDictionary(x => x.GameId, x => x);
+        
         foreach (var (classifier, predictions) in classifiers)
         {
             var model = historicalModel.Copy();
@@ -107,9 +161,17 @@ public class NbaPredictorTests : IntegrationTestBase
             {
                 foreach (var game in dateGroup)
                 {
+                    var gameOdds = odds2024.GetValueOrDefault(game.GameId);
+                    
                     var home = model.GetTeam(game.HomeTeam);
                     var away = model.GetTeam(game.AwayTeam);
                 
+                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
+                    var awayEloProbability = 1 - homeEloProbability;
+                    
+                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
+                    var awayGlickoProbability = 1 - homeGlickoProbability;
+                    
                     var prediction = classifier.PredictGame(new NbaGameTrainingData
                     {
                         HomeIdentifier = home.TeamIdentifier,
@@ -117,12 +179,28 @@ public class NbaPredictorTests : IntegrationTestBase
                         MatchupIdentifier = game.MatchupIdentifier,
                         HomeEloRating = (float) home.EloRating,
                         AwayEloRating = (float) away.EloRating,
+                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
+                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
+                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
+                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
+                        HomeEloProbability = (float) homeEloProbability,
+                        AwayEloProbability = (float) awayEloProbability,
+                        HomeGlickoRating = (float) home.GlickoScore.Rating,
+                        AwayGlickoRating = (float) away.GlickoScore.Rating,
+                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
+                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
+                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
+                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
+                        HomeGlickoProbability = (float) homeGlickoProbability,
+                        AwayGlickoProbability = (float) awayGlickoProbability,
+                        HomeOdds = (float?) gameOdds?.HomeOdds,
+                        AwayOdds = (float?) gameOdds?.AwayOdds,
                         HomeTotalWinPercentage = (float) home.TotalWinPercentage,
                         AwayTotalWinPercentage = (float) away.TotalWinPercentage,
                         HomeWinPercentageAtHome = (float) home.HomeWinPercentage,
                         AwayWinPercentageWhenAway = (float) away.AwayWinPercentage,
-                        HomeLastTenGamesWinPercentage = (float)home.LastTenGameWinPercentage,
-                        AwayLastTenGamesWinPercentage = (float)away.LastTenGameWinPercentage,
+                        HomeLastTenGamesWinPercentage = (float) home.LastTenGameWinPercentage,
+                        AwayLastTenGamesWinPercentage = (float) away.LastTenGameWinPercentage,
                         HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
                         AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
                         HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
@@ -150,7 +228,7 @@ public class NbaPredictorTests : IntegrationTestBase
     }
     
     [Fact]
-    public async Task OptimizeOptions()
+    public async Task FastForest()
     {
         await using var scope = CreateScope();
         var sp = scope.ServiceProvider;
@@ -164,7 +242,7 @@ public class NbaPredictorTests : IntegrationTestBase
             "MIA", "MIL", "MIN", "NOP", "NYK", "OKC", "ORL", "PHI", "PHO", "POR", "SAC", "SAS", "TOR", "UTA", "WAS"
         ];
 
-        var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), teams);
+        var historicalModel = new NbaHistoricalModel(new MarginWithRestDaysEloCalculator(20.0, 80.0, new RestDayConfiguration()), new Glicko2Calculator(), teams);
         
         int[] trainingSeasons = [2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
         var trainingDataSet = new TrainingDataSet();
@@ -183,39 +261,17 @@ public class NbaPredictorTests : IntegrationTestBase
             historicalModel.Regress();
         }
 
-        // string[] features =
-        // [
-        //     nameof(NbaGameFeatures.EloDiff),
-        //     nameof(NbaGameFeatures.OddsDiff),
-        //
-        //     nameof(NbaGameFeatures.HomeWinPercentageAtHome),
-        //     nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
-        //
-        //     nameof(NbaGameFeatures.OffensiveRatingDiff),
-        //     nameof(NbaGameFeatures.DefensiveRatingDiff),
-        //
-        //     nameof(NbaGameFeatures.HomeRestDays),
-        //     nameof(NbaGameFeatures.AwayRestDays),
-        //     nameof(NbaGameFeatures.RestDaysDiff),
-        //
-        //     nameof(NbaGameFeatures.HomeBackToBack),
-        //     nameof(NbaGameFeatures.AwayBackToBack),
-        // ];
-        
         string[] features =
         [
             nameof(NbaGameFeatures.EloDiff),
-            
-            nameof(NbaGameFeatures.HomeRestDays),
-            nameof(NbaGameFeatures.AwayRestDays),
-            nameof(NbaGameFeatures.RestDaysDiff),
-            
+         
             nameof(NbaGameFeatures.HomeWinPercentageAtHome),
             nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
-    
+            
             nameof(NbaGameFeatures.OffensiveRatingDiff),
             nameof(NbaGameFeatures.DefensiveRatingDiff),
-    
+            
+            nameof(NbaGameFeatures.RestDaysDiff),
             nameof(NbaGameFeatures.HomeBackToBack),
             nameof(NbaGameFeatures.AwayBackToBack),
         ];
@@ -231,28 +287,19 @@ public class NbaPredictorTests : IntegrationTestBase
             FeatureColumnName = "Features",
         };
         
-        //var fastForest_Default = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.None, features);
-        //var fastForest_WithMatchup_Default = new FastForestClassifier(FastForestClassifier.DefaultOptions, ClassifierConfig.Matchup(CategoryConfig.OneHotHash()), features);
-        
         var fastForest_CustomOptions = new FastForestClassifier(options, ClassifierConfig.None, features);
-        var fastForest_WithMatchup_CustomOptions = new FastForestClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
-        var fastForest_WithAllCategories_CustomOptions = new FastForestClassifier(options, ClassifierConfig.All(CategoryConfig.OneHot(), CategoryConfig.OneHot(), CategoryConfig.OneHotHash()), features);
-        
-        //fastForest_Default.TrainModel(trainingDataSet.TrainingGames);
-        //fastForest_WithMatchup_Default.TrainModel(trainingGames);
+        //var fastForest_WithMatchup_CustomOptions = new FastForestClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
+        //var fastForest_WithAllCategories_CustomOptions = new FastForestClassifier(options, ClassifierConfig.All(CategoryConfig.OneHot(), CategoryConfig.OneHot(), CategoryConfig.OneHotHash()), features);
         
         fastForest_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
-        fastForest_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
-        fastForest_WithAllCategories_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        //fastForest_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        //fastForest_WithAllCategories_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
         
         var classifiers = new List<(IPredictionEngine, PredictionPerformanceTracker)>
         {
-            //(fastForest_Default, new PredictionPerformanceTracker("FastForest - Default")),
-            //(fastForest_WithMatchup_Default, new PredictionPerformanceTracker("FastForest - Default With Matchup category")),
-            
             (fastForest_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom")),
-            (fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With Matchup category")),
-            (fastForest_WithAllCategories_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With all categories"))
+            //(fastForest_WithMatchup_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With Matchup category")),
+            //(fastForest_WithAllCategories_CustomOptions, new PredictionPerformanceTracker("FastForest - Custom With all categories"))
         };
         
         var games2024 = await gameLoader.GetGames(new Season(2024));
@@ -270,6 +317,12 @@ public class NbaPredictorTests : IntegrationTestBase
                     var home = model.GetTeam(game.HomeTeam);
                     var away = model.GetTeam(game.AwayTeam);
                 
+                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
+                    var awayEloProbability = 1 - homeEloProbability;
+                    
+                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
+                    var awayGlickoProbability = 1 - homeGlickoProbability;
+                    
                     var prediction = classifier.PredictGame(new NbaGameTrainingData
                     {
                         HomeIdentifier = home.TeamIdentifier,
@@ -281,6 +334,16 @@ public class NbaPredictorTests : IntegrationTestBase
                         AwayEloMomentum5Games = (float) away.EloMomentum5Games,
                         HomeEloMomentum10Games = (float) home.EloMomentum10Games,
                         AwayEloMomentum10Games = (float) away.EloMomentum10Games,
+                        HomeEloProbability = (float) homeEloProbability,
+                        AwayEloProbability = (float) awayEloProbability,
+                        HomeGlickoRating = (float) home.GlickoScore.Rating,
+                        AwayGlickoRating = (float) away.GlickoScore.Rating,
+                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
+                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
+                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
+                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
+                        HomeGlickoProbability = (float) homeGlickoProbability,
+                        AwayGlickoProbability = (float) awayGlickoProbability,
                         HomeOdds = (float?) gameOdds?.HomeOdds,
                         AwayOdds = (float?) gameOdds?.AwayOdds,
                         HomeTotalWinPercentage = (float) home.TotalWinPercentage,

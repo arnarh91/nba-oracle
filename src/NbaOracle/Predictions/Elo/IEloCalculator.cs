@@ -6,6 +6,7 @@ namespace NbaOracle.Predictions.Elo;
 public interface IEloCalculator
 {
     (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game);
+    double PredictWinProbability(TeamStatistics home, TeamStatistics away, Game game);
 }
 
 public record RestDayConfiguration(
@@ -15,65 +16,97 @@ public record RestDayConfiguration(
     double ThreePlusDays = 15
 );
 
-public class StandardEloCalculator(double k) : IEloCalculator
+public abstract class EloCalculatorBase(double k) : IEloCalculator
 {
-    public (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
-    {
-        var score = game.HomePoints > game.AwayPoints ? 1 : 0;
-        
-        var expectedHome = ExpectedScore(home.EloRating, away.EloRating);
-        var expectedAway = 1.0 - expectedHome;
-
-        var updatedHomeEloRating = home.EloRating + k * (score - expectedHome);
-        var updatedAwayEloRating = away.EloRating + k * (1 - score - expectedAway);
-
-        return (updatedHomeEloRating, updatedAwayEloRating);
-    }
+    protected double K { get; } = k;
     
-    private static double ExpectedScore(double ratingA, double ratingB)
+    public abstract (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game);
+    
+    public abstract double PredictWinProbability(TeamStatistics home, TeamStatistics away, Game game);
+    
+    protected static double CalculateExpectedScore(double ratingA, double ratingB)
     {
         return 1.0 / (1.0 + Math.Pow(10.0, (ratingB - ratingA) / 400.0));
     }
 }
 
-public class HomeAdvantageEloCalculator(double k, double homeAdvantage) : IEloCalculator
+public class StandardEloCalculator(double k) : EloCalculatorBase(k)
 {
-    public (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
+    public override (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
     {
         var score = game.HomePoints > game.AwayPoints ? 1 : 0;
         
-        var expectedHome = 1.0 / (1.0 + Math.Pow(10.0, ((away.EloRating - (home.EloRating + homeAdvantage)) / 400.0)));
+        var expectedHome = CalculateExpectedScore(home.EloRating, away.EloRating);
         var expectedAway = 1.0 - expectedHome;
 
-        var updatedHomeEloRating = home.EloRating + k * (score - expectedHome);
-        var updatedAwayEloRating = away.EloRating + k * (1 - score - expectedAway);
+        var updatedHomeEloRating = home.EloRating + K * (score - expectedHome);
+        var updatedAwayEloRating = away.EloRating + K * (1 - score - expectedAway);
 
         return (updatedHomeEloRating, updatedAwayEloRating);
     }
+    
+    public override double PredictWinProbability(TeamStatistics homeTeam, TeamStatistics awayTeam, Game game)
+    {
+        return CalculateExpectedScore(homeTeam.EloRating, awayTeam.EloRating);
+    }
 }
 
-public class HomeAdvantageWithMarginEloCalculator(double k, double homeAdvantage) : IEloCalculator
+public class HomeAdvantageEloCalculator(double k, double homeAdvantage) : EloCalculatorBase(k)
 {
-    public (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
+    public override (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
+    {
+        var score = game.HomePoints > game.AwayPoints ? 1 : 0;
+        
+        var adjustedHome = home.EloRating + homeAdvantage;
+        var expectedHome = CalculateExpectedScore(adjustedHome, away.EloRating);
+        var expectedAway = 1.0 - expectedHome;
+
+        var updatedHomeEloRating = home.EloRating + K * (score - expectedHome);
+        var updatedAwayEloRating = away.EloRating + K * (1 - score - expectedAway);
+
+        return (updatedHomeEloRating, updatedAwayEloRating);
+    }
+    
+    public override double PredictWinProbability(TeamStatistics homeTeam, TeamStatistics awayTeam, Game game)
+    {
+        var adjustedHome = homeTeam.EloRating + homeAdvantage;
+        return CalculateExpectedScore(adjustedHome, awayTeam.EloRating);
+    }
+}
+
+public class HomeAdvantageWithMarginEloCalculator(double k, double homeAdvantage) : EloCalculatorBase(k)
+{
+    public override (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
     {
         var margin = game.HomePoints - game.AwayPoints;
         var score = game.HomePoints > game.AwayPoints ? 1 : 0;
         
         var adjustedHome = home.EloRating + homeAdvantage;
-        var expectedHome = 1.0 / (1.0 + Math.Pow(10.0, (away.EloRating - adjustedHome) / 400.0));
+        var expectedHome = CalculateExpectedScore(adjustedHome, away.EloRating);
         
-        var multiplier = Math.Log(Math.Abs(margin) + 1) * (2.2 / ((expectedHome - 0.5) * 2.2 + 2.2));
+        var multiplier = CalculateMarginMultiplier(margin, expectedHome);
         
-        var updatedHomeEloRating = home.EloRating + k * multiplier * (score - expectedHome);
-        var updatedAwayEloRating = away.EloRating + k * multiplier * ((1 - score) - (1 - expectedHome));
+        var updatedHomeEloRating = home.EloRating + K * multiplier * (score - expectedHome);
+        var updatedAwayEloRating = away.EloRating + K * multiplier * ((1 - score) - (1 - expectedHome));
         
         return (updatedHomeEloRating, updatedAwayEloRating);
     }
+    
+    public override double PredictWinProbability(TeamStatistics homeTeam, TeamStatistics awayTeam, Game game)
+    {
+        var adjustedHome = homeTeam.EloRating + homeAdvantage;
+        return CalculateExpectedScore(adjustedHome, awayTeam.EloRating);
+    }
+
+    private static double CalculateMarginMultiplier(int margin, double expectedScore)
+    {
+        return Math.Log(Math.Abs(margin) + 1) * (2.2 / ((expectedScore - 0.5) * 2.2 + 2.2));
+    }
 }
 
-public class MarginWithRestDaysEloCalculator(double k, double homeAdvantage, RestDayConfiguration restDayConfiguration) : IEloCalculator
+public class MarginWithRestDaysEloCalculator(double k, double homeAdvantage, RestDayConfiguration restDayConfiguration) : EloCalculatorBase(k)
 {
-    public (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
+    public override (double updatedHomeEloRating, double updatedAwayEloRating) Calculate(TeamStatistics home, TeamStatistics away, Game game)
     {
         var homeRestDays = home.GetRestDays(game.GameDate);
         var awayRestDays = away.GetRestDays(game.GameDate);
@@ -83,15 +116,25 @@ public class MarginWithRestDaysEloCalculator(double k, double homeAdvantage, Res
         var adjustedHome = home.EloRating + homeAdvantage + GetRestAdjustment(homeRestDays);
         var adjustedAway = away.EloRating + GetRestAdjustment(awayRestDays);
         
-        var expectedHome = 1.0 / (1.0 + Math.Pow(10.0, (adjustedAway - adjustedHome) / 400.0));
+        var expectedHome = CalculateExpectedScore(adjustedHome, adjustedAway);
 
         var multiplier = Math.Log(Math.Abs(game.HomePoints - game.AwayPoints) + 1) * (2.2 / ((expectedHome - 0.5) * 2.2 + 2.2));
-
         
-        var updatedHomeEloRating = home.EloRating + k * multiplier * (score - expectedHome);
-        var updatedAwayEloRating = away.EloRating + k * multiplier * ((1 - score) - (1 - expectedHome));
+        var updatedHomeEloRating = home.EloRating + K * multiplier * (score - expectedHome);
+        var updatedAwayEloRating = away.EloRating + K * multiplier * ((1 - score) - (1 - expectedHome));
 
         return (updatedHomeEloRating, updatedAwayEloRating);
+    }
+    
+    public override double PredictWinProbability(TeamStatistics home, TeamStatistics away, Game game)
+    {
+        var homeRestDays = home.GetRestDays(game.GameDate);
+        var awayRestDays = away.GetRestDays(game.GameDate);
+        
+        var adjustedHome = home.EloRating + homeAdvantage + GetRestAdjustment(homeRestDays);
+        var adjustedAway = away.EloRating + GetRestAdjustment(awayRestDays);
+        
+        return CalculateExpectedScore(adjustedHome, adjustedAway);
     }
     
     private double GetRestAdjustment(int restDays)
