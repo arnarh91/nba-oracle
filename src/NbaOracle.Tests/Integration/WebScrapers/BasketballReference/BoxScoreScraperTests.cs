@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using NbaOracle.Data.Games;
@@ -33,7 +34,6 @@ public class BoxScoreScraperTests : IntegrationTestBase
         var boxScoreScraper = sp.GetRequiredService<BoxScoreScraper>();
 
         var games = await gameLoader.GetGames(season);
-        //games = games.Take(1).ToList();
 
         var boxScores = new List<BoxScoreData>();
         foreach (var game in games)

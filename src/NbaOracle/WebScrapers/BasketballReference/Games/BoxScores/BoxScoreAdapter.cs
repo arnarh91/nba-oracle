@@ -55,8 +55,24 @@ public static class BoxScoreAdapter
                     x.ThreePointAttemptRate, x.FreeThrowsAttemptRate, Divide(x.OffensiveReboundPercentage), Divide(x.DefensiveReboundPercentage),
                     Divide(x.TotalReboundPercentage), Divide(x.AssistPercentage), Divide(x.StealPercentage), Divide(x.BlockPercentage), Divide(x.TurnoverPercentage),
                     Divide(x.UsagePercentage), x.OffensiveRating, x.DefensiveRating, x.BoxPlusMinus)));
+
+            var homeFf = boxScore.HomeBoxScore.FourFactors;
+            var awayFf = boxScore.AwayBoxScore.FourFactors;
             
-            var gameBoxScore = new GameBoxScore(game.GameId, season, quarters, didNotPlay, playerBasicBoxScore, playerAdvancedBoxScore);
+            var gameBoxScore = new GameBoxScore
+            (
+                game.GameId, 
+                season, 
+                game.HomeTeam,
+                game.AwayTeam,
+                new TeamBoxScoreModel(new FourFactorsModel(homeFf.Pace, homeFf.Efg, homeFf.Tov, homeFf.Orb, homeFf.Ftfga, homeFf.Ortg)),
+                new TeamBoxScoreModel(new FourFactorsModel(awayFf.Pace, awayFf.Efg, awayFf.Tov, awayFf.Orb, awayFf.Ftfga, awayFf.Ortg)),
+                quarters, 
+                didNotPlay, 
+                playerBasicBoxScore, 
+                playerAdvancedBoxScore
+            );
+            
             results.Add(gameBoxScore);
         }
 

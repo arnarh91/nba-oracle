@@ -15,9 +15,13 @@ public static class BoxScoreParser
     public static BoxScoreData Parse(IDocument document, string gameIdentifier)
     {
         var lineScore = ParseLineScore(document);
+        var (fourFactorsHome, fourFactorsAway) = ParseFourFactors(document);
         var homeBoxScore = ParseBoxScore(document, lineScore.HomeTeam);
         var awayBoxScore = ParseBoxScore(document, lineScore.AwayTeam);
 
+        homeBoxScore.FourFactors = fourFactorsHome;
+        awayBoxScore.FourFactors = fourFactorsAway;
+        
         return new BoxScoreData(gameIdentifier, lineScore, homeBoxScore, awayBoxScore);
     }
 
@@ -70,6 +74,44 @@ public static class BoxScoreParser
         return new LineScoreData(homeTeamIdentifier, awayTeamIdentifier, quarters);
     }
 
+    private static (FourFactorsData Home, FourFactorsData Away) ParseFourFactors(IDocument document)
+    {
+        var fourFactorsElement = document.QuerySelector("div[id='all_four_factors']");
+
+        var comment = fourFactorsElement?.Descendants<IComment>().FirstOrDefault();
+        if (comment == null)
+            throw new InvalidOperationException("Unable to parse FourFactors");
+        
+        var parser = new HtmlParser();
+        var innerDocument = parser.ParseDocument(comment.TextContent.Trim());
+        
+        var fourFactorsSelector = innerDocument.QuerySelectorAll("div[id='div_four_factors'] tbody tr");
+        
+        var homeTeam = fourFactorsSelector[1];
+        var awayTeam = fourFactorsSelector[0];
+
+        var fourFactorsHome = new FourFactorsData
+        (
+            homeTeam.GetTextContentAsDecimal("td[data-stat='pace']"),
+            homeTeam.GetTextContentAsDecimal("td[data-stat='efg_pct']"),
+            homeTeam.GetTextContentAsDecimal("td[data-stat='tov_pct']"),
+            homeTeam.GetTextContentAsDecimal("td[data-stat='orb_pct']"),
+            homeTeam.GetTextContentAsDecimal("td[data-stat='ft_rate']"),
+            homeTeam.GetTextContentAsDecimal("td[data-stat='off_rtg']")        
+        );
+        
+        var fourFactorsAway = new FourFactorsData
+        (
+            awayTeam.GetTextContentAsDecimal("td[data-stat='pace']"),
+            awayTeam.GetTextContentAsDecimal("td[data-stat='efg_pct']"),
+            awayTeam.GetTextContentAsDecimal("td[data-stat='tov_pct']"),
+            awayTeam.GetTextContentAsDecimal("td[data-stat='orb_pct']"),
+            awayTeam.GetTextContentAsDecimal("td[data-stat='ft_rate']"),
+            awayTeam.GetTextContentAsDecimal("td[data-stat='off_rtg']")        
+        );
+
+        return (fourFactorsHome, fourFactorsAway);
+    }
         
     private static TeamBoxScoreData ParseBoxScore(IDocument document, string team)
     {

@@ -7,9 +7,25 @@ using NbaOracle.ValueObjects;
 
 namespace NbaOracle.Data.Games;
 
-public record GameBoxScore(int GameId, Season Season, List<GameQuarterScore> Quarters, List<GameDidNotPlay> DidNotPlay, List<PlayerBasicBoxScore> PlayerBasicBoxScore, List<PlayerAdvancedBoxScore> PlayerAdvancedBoxScore);
+public record GameBoxScore
+(
+    int GameId, 
+    Season Season, 
+    string HomeTeam,
+    string AwayTeam,
+    TeamBoxScoreModel HomeBoxScore,
+    TeamBoxScoreModel AwayBoxScore,
+    List<GameQuarterScore> Quarters, 
+    List<GameDidNotPlay> DidNotPlay, 
+    List<PlayerBasicBoxScore> PlayerBasicBoxScore, 
+    List<PlayerAdvancedBoxScore> PlayerAdvancedBoxScore
+);
+
 public record GameQuarterScore(int QuarterNumber, string QuarterLabel, int HomeScore, int AwayScore);
 public record GameDidNotPlay(string TeamIdentifier, string PlayerName, string Reason);
+
+public record TeamBoxScoreModel(FourFactorsModel FourFactors);
+public record FourFactorsModel(decimal Pace, decimal Efg, decimal Tov, decimal Orb, decimal Ftfga, decimal Ortg);
 
 public record PlayerBasicBoxScore(
     string PlayerName,
@@ -73,6 +89,7 @@ public class GameBoxScoreRepository
         var gameDidNotPlayDataTable = CreateDidNotPlayDataTable(boxScores);
         var playerBasicBoxScoreDataTable = CreatePlayerBasicBoxScoreDataTable(boxScores);
         var playerAdvancedBoxScoreDataTable = CreatePlayerAdvancedBoxScoreDataTable(boxScores);
+        var teamBoxScoreDataTable = CreateTeamBoxScoreDataTable(boxScores);
         
         var parameters = new DynamicParameters();
         parameters.Add("@Games", gameBoxScoreDataTable.AsTableValuedParameter("nba.tt_Merge_GameBoxScore"));
@@ -80,6 +97,7 @@ public class GameBoxScoreRepository
         parameters.Add("@DidNotPlay", gameDidNotPlayDataTable.AsTableValuedParameter("nba.tt_Merge_GameDidNotPlay"));
         parameters.Add("@PlayerBasicBoxScores", playerBasicBoxScoreDataTable.AsTableValuedParameter("nba.tt_Merge_GamePlayerBasicBoxScore"));
         parameters.Add("@PlayerAdvancedBoxScores", playerAdvancedBoxScoreDataTable.AsTableValuedParameter("nba.tt_Merge_GamePlayerAdvancedBoxScore"));
+        parameters.Add("@TeamBoxScores", teamBoxScoreDataTable.AsTableValuedParameter("nba.tt_Merge_GameTeamBoxScore"));
         
         await _dbConnection.ExecuteAsync("nba.sp_MergeGameBoxScores", parameters, commandType:CommandType.StoredProcedure);
     }
@@ -250,5 +268,41 @@ public class GameBoxScoreRepository
         }
 
         return dt;
+    }
+    
+    private static DataTable CreateTeamBoxScoreDataTable(List<GameBoxScore> boxScores)
+    {
+        var dt = new DataTable();
+        
+        dt.Columns.Add("GameBoxScoreId", typeof(int));
+        dt.Columns.Add("TeamIdentifier", typeof(string));
+        dt.Columns.Add("Pace", typeof(decimal));
+        dt.Columns.Add("Efg", typeof(decimal));
+        dt.Columns.Add("Tov", typeof(decimal));
+        dt.Columns.Add("Orb", typeof(decimal));
+        dt.Columns.Add("Ftfga", typeof(decimal));
+        dt.Columns.Add("Ortg", typeof(decimal));
+
+        foreach (var boxScore in boxScores)
+        {
+            AddRow(boxScore.GameId, boxScore.HomeTeam, boxScore.HomeBoxScore.FourFactors);
+            AddRow(boxScore.GameId, boxScore.AwayTeam, boxScore.AwayBoxScore.FourFactors);
+        }
+
+        return dt;
+
+        void AddRow(int gameId, string teamIdentifier, FourFactorsModel ff)
+        {
+            dt.Rows.Add(
+                gameId,
+                teamIdentifier,
+                ff.Pace,
+                ff.Efg,
+                ff.Tov,
+                ff.Orb,
+                ff.Ftfga,
+                ff.Ortg
+            );  
+        }
     }
 }

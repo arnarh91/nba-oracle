@@ -1,4 +1,5 @@
-﻿using Microsoft.ML.Data;
+﻿using System;
+using Microsoft.ML.Data;
 
 namespace NbaOracle.Predictions;
 

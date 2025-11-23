@@ -4,6 +4,7 @@ create or alter procedure nba.sp_MergeGameBoxScores
 , @DidNotPlay              nba.tt_Merge_GameDidNotPlay             readonly
 , @PlayerBasicBoxScores    nba.tt_Merge_GamePlayerBasicBoxScore    readonly
 , @PlayerAdvancedBoxScores nba.tt_Merge_GamePlayerAdvancedBoxScore readonly
+, @TeamBoxScores           nba.tt_Merge_GameTeamBoxScore           readonly
 as
 begin
   set nocount on;
@@ -37,6 +38,36 @@ begin
                                          , AwayScore )
                                   values
                                        ( source.GameBoxScoreId, source.QuarterNumber, source.QuarterLabel, source.HomeScore, source.AwayScore );
+
+  -- Merge GameTeamBoxScore (Four Factors)
+  merge nba.GameTeamBoxScore as target
+  using ( select tbs.GameBoxScoreId
+               , tbs.TeamIdentifier
+               , tbs.Pace
+               , tbs.Efg
+               , tbs.Tov
+               , tbs.Orb
+               , tbs.Ftfga
+               , tbs.Ortg
+          from   @TeamBoxScores tbs ) as source
+  on target.GameBoxScoreId = source.GameBoxScoreId
+ and target.TeamIdentifier = source.TeamIdentifier
+  when matched then update set Pace = source.Pace
+                             , Efg = source.Efg
+                             , Tov = source.Tov
+                             , Orb = source.Orb
+                             , Ftfga = source.Ftfga
+                             , Ortg = source.Ortg
+  when not matched by target then insert ( GameBoxScoreId
+                                         , TeamIdentifier
+                                         , Pace
+                                         , Efg
+                                         , Tov
+                                         , Orb
+                                         , Ftfga
+                                         , Ortg )
+                                  values
+                                       ( source.GameBoxScoreId, source.TeamIdentifier, source.Pace, source.Efg, source.Tov, source.Orb, source.Ftfga, source.Ortg );
 
   -- Merge DidNotPlay
   merge nba.GameDidNotPlay as target

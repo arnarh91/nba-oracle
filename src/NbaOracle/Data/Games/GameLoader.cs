@@ -20,6 +20,23 @@ public record Game
     public required int AwayPoints { get; init; }
     public required string MatchupIdentifier { get; init; }
     public required string BoxScoreLink { get; init; }
+    public TeamBoxScore HomeBoxScore { get; set; }
+    public TeamBoxScore AwayBoxScore { get; set; }
+}
+
+public record TeamBoxScore
+{
+    public required FourFactors FourFactors { get; init; }
+}
+
+public record FourFactors
+{
+    public required decimal Pace { get; init; }
+    public required decimal Efg { get; init; }
+    public required decimal Tov { get; init; }
+    public required decimal Orb { get; init; }
+    public required decimal Ftfga { get; init; }
+    public required decimal Ortg { get; init; }
 }
 
 public class GameLoader
@@ -33,25 +50,56 @@ public class GameLoader
 
     public async Task<List<Game>> GetGames(Season season)
     {
-        const string sql = """
-                           select g.Id GameId
-                                , g.GameIdentifier
-                                , g.GameDate
-                                , g.HomeTeamIdentifier as HomeTeam
-                                , g.AwayTeamIdentifier as AwayTeam
-                                , g.WinTeamIdentifier as WinTeam
-                                , g.HomePoints
-                                , g.AwayPoints
-                                , g.MatchupIdentifier
-                                , g.BoxScoreLink
-                           from   nba.Game g
-                           join nba.Season s
-                            on s.Id = g.SeasonId
-                           where  s.StartYear = @startYear
-                              and g.IsPlayoffGame = 0
-                           order by g.GameDate;
-                           """;
+        await using var multiReader = await _dbConnection.QueryMultipleAsync("nba.sp_readSide_Games", new { startYear = season.SeasonStartYear }, commandType: CommandType.StoredProcedure);
 
-        return (await _dbConnection.QueryAsync<Game>(sql, new { startYear = season.SeasonStartYear }, commandType: CommandType.Text)).ToList();
+        var games = (await multiReader.ReadAsync<Game>()).ToList();
+
+        var boxScores = (await multiReader.ReadAsync<FourFactorsProjection>()).ToDictionary(x => new { x.GameBoxScoreId, x.TeamIdentifier}, x => x);
+        
+        foreach (var game in games)
+        {
+            if (!boxScores.TryGetValue(new { GameBoxScoreId = game.GameId, TeamIdentifier = game.HomeTeam }, out var homeBoxScore) || !boxScores.TryGetValue(new { GameBoxScoreId = game.GameId, TeamIdentifier = game.AwayTeam }, out var awayBoxScore))
+                throw new InvalidOperationException("TeamBoxScore not found");
+        
+            game.HomeBoxScore = new TeamBoxScore
+            {
+                FourFactors = new FourFactors
+                {
+                    Pace = homeBoxScore.Pace,
+                    Efg = homeBoxScore.Efg,
+                    Tov = homeBoxScore.Tov,
+                    Orb = homeBoxScore.Orb,
+                    Ftfga = homeBoxScore.Ftfga,
+                    Ortg = homeBoxScore.Ortg
+                }
+            };
+            
+            game.AwayBoxScore = new TeamBoxScore
+            {
+                FourFactors = new FourFactors
+                {
+                    Pace = awayBoxScore.Pace,
+                    Efg = awayBoxScore.Efg,
+                    Tov = awayBoxScore.Tov,
+                    Orb = awayBoxScore.Orb,
+                    Ftfga = awayBoxScore.Ftfga,
+                    Ortg = awayBoxScore.Ortg
+                }
+            };
+        }
+        
+        return games;
+    }
+
+    private record FourFactorsProjection
+    {
+        public required int GameBoxScoreId { get; init; }
+        public required string TeamIdentifier { get; init; }
+        public required decimal Pace { get; init; }
+        public required decimal Efg { get; init; }
+        public required decimal Tov { get; init; }
+        public required decimal Orb { get; init; }
+        public required decimal Ftfga { get; init; }
+        public required decimal Ortg { get; init; }
     }
 }

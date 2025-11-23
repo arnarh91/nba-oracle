@@ -5,6 +5,8 @@ namespace NbaOracle.WebScrapers.BasketballReference.Games.BoxScores;
 public record BoxScoreData(string GameIdentifier, LineScoreData LineScore, TeamBoxScoreData HomeBoxScore, TeamBoxScoreData AwayBoxScore);
 public record LineScoreData(string HomeTeam, string AwayTeam, List<QuarterScoreData> Quarters);
 
+public record FourFactorsData(decimal Pace, decimal Efg, decimal Tov, decimal Orb, decimal Ftfga, decimal Ortg);
+
 public record QuarterScoreData(string Quarter, int HomeScore, int AwayScore)
 {
     public int GetQuarterNumber()
@@ -17,6 +19,7 @@ public record QuarterScoreData(string Quarter, int HomeScore, int AwayScore)
 }
 public record TeamBoxScoreData
 {
+    public FourFactorsData FourFactors { get; set; } = null!;
     public List<PlayerBasicBoxScoreData> BasicBoxScore { get; } = [];
     public List<PlayerAdvancedBoxScoreData> AdvancedBoxScore { get; } = [];
     public List<DidNotPlayData> DidNotPlay { get; set; } = [];
