@@ -132,7 +132,31 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
             RestDaysDiff = game.HomeRestDaysBeforeGame - game.AwayRestDaysBeforeGame,
             
             HomeBackToBack = game.HomeBackToBack ? 1 : 0,
-            AwayBackToBack = game.AwayBackToBack ? 1 : 0
+            AwayBackToBack = game.AwayBackToBack ? 1 : 0,
+            
+            HomeFourFactor10AvgPace =  game.HomeFourFactor10AvgPace,
+            AwayFourFactor10AvgPace = game.AwayFourFactor10AvgPace,
+            FourFactor10AvgPaceDiff = game.HomeFourFactor10AvgPace - game.AwayFourFactor10AvgPace, 
+            
+            HomeFourFactor10AvgEfg =  game.HomeFourFactor10AvgEfg,
+            AwayFourFactor10AvgEfg = game.AwayFourFactor10AvgEfg,
+            FourFactor10AvgEfgDiff = game.HomeFourFactor10AvgEfg - game.AwayFourFactor10AvgEfg,
+            
+            HomeFourFactor10AvgTov = game.HomeFourFactor10AvgTov,
+            AwayFourFactor10AvgTov = game.AwayFourFactor10AvgTov,
+            FourFactor10AvgTovDiff = game.HomeFourFactor10AvgTov - game.AwayFourFactor10AvgTov,
+            
+            HomeFourFactor10AvgOrb = game.HomeFourFactor10AvgOrb,
+            AwayFourFactor10AvgOrb = game.AwayFourFactor10AvgOrb,
+            FourFactor10AvgOrbDiff = game.HomeFourFactor10AvgOrb - game.AwayFourFactor10AvgOrb,
+            
+            HomeFourFactor10AvgFtfga = game.HomeFourFactor10AvgFtfga,
+            AwayFourFactor10AvgFtfga = game.AwayFourFactor10AvgFtfga,
+            FourFactor10AvgFtfgaDiff = game.HomeFourFactor10AvgFtfga - game.AwayFourFactor10AvgFtfga,
+            
+            HomeFourFactor10AvgOrtg = game.HomeFourFactor10AvgOrtg,
+            AwayFourFactor10AvgOrtg = game.AwayFourFactor10AvgOrtg,
+            FourFactor10AvgOrtgDiff = game.HomeFourFactor10AvgOrtg - game.AwayFourFactor10AvgOrtg
         });
     }
 

@@ -56,9 +56,9 @@ public class EloModelTests : IntegrationTestBase
             {
                 var homeTeam = model.GetTeam(game.HomeTeam);
                 var awayTeam = model.GetTeam(game.AwayTeam);
-
-                //var homeWinProbability = model.EloCalculator.PredictWinProbability(homeTeam, awayTeam, game);
-                var homeWinProbability = model.GlickoCalculator.PredictWinProbability(homeTeam.GlickoScore, awayTeam.GlickoScore);
+                    
+                var homeWinProbability = model.EloCalculator.PredictWinProbability(homeTeam, awayTeam, game);
+                //var homeWinProbability = model.GlickoCalculator.PredictWinProbability(homeTeam.GlickoScore, awayTeam.GlickoScore);
                 var predictedWinner = homeWinProbability > 0.5 ? game.HomeTeam : game.AwayTeam;
                 var confidence = game.HomeTeam == game.WinTeam ? homeWinProbability : 1 - homeWinProbability;
               

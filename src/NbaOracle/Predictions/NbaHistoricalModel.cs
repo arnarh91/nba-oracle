@@ -5,6 +5,7 @@ using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
 using NbaOracle.Predictions.Elo;
 using NbaOracle.Predictions.Glicko;
+using Newtonsoft.Json.Linq;
 
 namespace NbaOracle.Predictions;
 
@@ -84,6 +85,7 @@ public class TeamStatistics
         EloRating = 1500;
         EloRatings = [new EloRating(DateOnly.MinValue, EloRating)];
         GlickoScore = new GlickoScore(teamIdentifier);
+        FourFactors = new FourFactorsScore();
     }
 
     public string TeamIdentifier { get; set; }
@@ -96,6 +98,8 @@ public class TeamStatistics
     public List<EloRating> EloRatings { get; }
     
     public GlickoScore GlickoScore { get; }
+    
+    public FourFactorsScore FourFactors { get; } 
     
     public int Streak { get; set; }
     
@@ -139,10 +143,13 @@ public class TeamStatistics
 
         SetLastTenGameOffensiveRating(game);
         SetLastTenGameDefensiveRating(game);
+        
+        FourFactors.Apply(game.HomeTeam == TeamIdentifier ? game.HomeBoxScore.FourFactors : game.AwayBoxScore.FourFactors);
     }
 
     public void CopyFrom(TeamStatistics teamStatistics)
     {
+        // todo maintain this
         LastGameDate = teamStatistics.LastGameDate;
         
         EloRating = teamStatistics.EloRating;
@@ -284,3 +291,52 @@ public class TeamStatistics
 }
 
 public record EloRating(DateOnly Date, double Rating);
+
+public record FourFactorsScore
+{
+    private const int WindowSize = 10;
+    
+    public void Apply(FourFactors fourFactors)
+    {
+        AddAndTrim(Pace, fourFactors.Pace);
+        AddAndTrim(Efg, fourFactors.Efg);
+        AddAndTrim(Tov, fourFactors.Tov);
+        AddAndTrim(Orb, fourFactors.Orb);
+        AddAndTrim(Ftfga, fourFactors.Ftfga);
+        AddAndTrim(Ortg, fourFactors.Ortg);
+        
+        AvgPace = Pace.Average();
+        AvgEfg = Efg.Average();
+        AvgTov = Tov.Average();
+        AvgOrb = Orb.Average();
+        AvgFtfga = Ftfga.Average();
+        AvgOrtg = Ortg.Average();
+    }
+    
+    private static void AddAndTrim(List<decimal> list, decimal value)
+    {
+        list.Add(value);
+        if (list.Count > WindowSize)
+        {
+            list.RemoveAt(0);
+        }
+    }
+
+    private List<decimal> Pace { get; set; } = [];
+    public decimal AvgPace { get; private set; }
+    
+    private List<decimal> Efg { get; set; } = [];
+    public decimal AvgEfg { get; private set; }
+    
+    private List<decimal> Tov { get; set; } = [];
+    public decimal AvgTov { get; private set; }
+    
+    private List<decimal> Orb { get; set; } = [];
+    public decimal AvgOrb { get; private set; }
+    
+    private List<decimal> Ftfga { get; set; } = [];
+    public decimal AvgFtfga { get; private set; }
+    
+    private List<decimal> Ortg { get; set; } = [];
+    public decimal AvgOrtg { get; private set; }
+}

@@ -20,8 +20,8 @@ public record Game
     public required int AwayPoints { get; init; }
     public required string MatchupIdentifier { get; init; }
     public required string BoxScoreLink { get; init; }
-    public TeamBoxScore HomeBoxScore { get; set; }
-    public TeamBoxScore AwayBoxScore { get; set; }
+    public TeamBoxScore HomeBoxScore { get; set; } = null!;
+    public TeamBoxScore AwayBoxScore { get; set; } = null!;
 }
 
 public record TeamBoxScore

@@ -112,56 +112,8 @@ public class NbaPredictorTests : IntegrationTestBase
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    
-                    var home = model.GetTeam(game.HomeTeam);
-                    var away = model.GetTeam(game.AwayTeam);
-                
-                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
-                    var awayEloProbability = 1 - homeEloProbability;
-                    
-                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
-                    var awayGlickoProbability = 1 - homeGlickoProbability;
-                    
-                    var prediction = classifier.PredictGame(new NbaGameTrainingData
-                    {
-                        HomeIdentifier = home.TeamIdentifier,
-                        AwayIdentifier = away.TeamIdentifier,
-                        MatchupIdentifier = game.MatchupIdentifier,
-                        HomeEloRating = (float) home.EloRating,
-                        AwayEloRating = (float) away.EloRating,
-                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
-                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
-                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
-                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
-                        HomeEloProbability = (float) homeEloProbability,
-                        AwayEloProbability = (float) awayEloProbability,
-                        HomeGlickoRating = (float) home.GlickoScore.Rating,
-                        AwayGlickoRating = (float) away.GlickoScore.Rating,
-                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
-                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
-                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
-                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
-                        HomeGlickoProbability = (float) homeGlickoProbability,
-                        AwayGlickoProbability = (float) awayGlickoProbability,
-                        HomeOdds = (float?) gameOdds?.HomeOdds,
-                        AwayOdds = (float?) gameOdds?.AwayOdds,
-                        HomeTotalWinPercentage = (float) home.TotalWinPercentage,
-                        AwayTotalWinPercentage = (float) away.TotalWinPercentage,
-                        HomeWinPercentageAtHome = (float) home.HomeWinPercentage,
-                        AwayWinPercentageWhenAway = (float) away.AwayWinPercentage,
-                        HomeLastTenGamesWinPercentage = (float) home.LastTenGameWinPercentage,
-                        AwayLastTenGamesWinPercentage = (float) away.LastTenGameWinPercentage,
-                        HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
-                        AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
-                        HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
-                        AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.Streak,
-                        AwayCurrentStreak = away.Streak,
-                        HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
-                        AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
-                        HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
-                        AwayBackToBack = game.GameDate.AddDays(-1) == away.LastGameDate,
-                    });
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
@@ -239,6 +191,13 @@ public class NbaPredictorTests : IntegrationTestBase
             
             nameof(NbaGameFeatures.OffensiveRatingDiff),
             nameof(NbaGameFeatures.DefensiveRatingDiff),
+            
+            nameof(NbaGameFeatures.FourFactor10AvgPaceDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgEfgDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgTovDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgOrbDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgFtfgaDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgOrtgDiff),
         ];
 
         var options = new LightGbmBinaryTrainer.Options
@@ -251,16 +210,16 @@ public class NbaPredictorTests : IntegrationTestBase
             FeatureColumnName = "Features",
         };
         
-        //var lightGbm_CustomOptions = new LightGbmClassifier(options, ClassifierConfig.None, features);
-        var lightGbm_WithMatchup_CustomOptions = new LightGbmClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
+        var lightGbm_CustomOptions = new LightGbmClassifier(options, ClassifierConfig.None, features);
+        //var lightGbm_WithMatchup_CustomOptions = new LightGbmClassifier(options, ClassifierConfig.Matchup(CategoryConfig.OneHotHash(9)), features);
         
-        //lightGbm_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
-        lightGbm_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        lightGbm_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
+        //lightGbm_WithMatchup_CustomOptions.TrainModel(trainingDataSet.TrainingGames);
         
         var classifiers = new List<(IPredictionEngine, PredictionPerformanceTracker)>
         {
-            //(lightGbm_CustomOptions, new PredictionPerformanceTracker("LightGbm")),
-            (lightGbm_WithMatchup_CustomOptions, new PredictionPerformanceTracker("LightGbm - Custom With Matchup category")),
+            (lightGbm_CustomOptions, new PredictionPerformanceTracker("LightGbm")),
+            //(lightGbm_WithMatchup_CustomOptions, new PredictionPerformanceTracker("LightGbm - Custom With Matchup category")),
         };
         
         var games2024 = await gameLoader.GetGames(new Season(2024));
@@ -274,56 +233,8 @@ public class NbaPredictorTests : IntegrationTestBase
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    
-                    var home = model.GetTeam(game.HomeTeam);
-                    var away = model.GetTeam(game.AwayTeam);
-                
-                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
-                    var awayEloProbability = 1 - homeEloProbability;
-                    
-                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
-                    var awayGlickoProbability = 1 - homeGlickoProbability;
-                    
-                    var prediction = classifier.PredictGame(new NbaGameTrainingData
-                    {
-                        HomeIdentifier = home.TeamIdentifier,
-                        AwayIdentifier = away.TeamIdentifier,
-                        MatchupIdentifier = game.MatchupIdentifier,
-                        HomeEloRating = (float) home.EloRating,
-                        AwayEloRating = (float) away.EloRating,
-                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
-                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
-                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
-                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
-                        HomeEloProbability = (float) homeEloProbability,
-                        AwayEloProbability = (float) awayEloProbability,
-                        HomeGlickoRating = (float) home.GlickoScore.Rating,
-                        AwayGlickoRating = (float) away.GlickoScore.Rating,
-                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
-                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
-                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
-                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
-                        HomeGlickoProbability = (float) homeGlickoProbability,
-                        AwayGlickoProbability = (float) awayGlickoProbability,
-                        HomeOdds = (float?) gameOdds?.HomeOdds,
-                        AwayOdds = (float?) gameOdds?.AwayOdds,
-                        HomeTotalWinPercentage = (float) home.TotalWinPercentage,
-                        AwayTotalWinPercentage = (float) away.TotalWinPercentage,
-                        HomeWinPercentageAtHome = (float) home.HomeWinPercentage,
-                        AwayWinPercentageWhenAway = (float) away.AwayWinPercentage,
-                        HomeLastTenGamesWinPercentage = (float) home.LastTenGameWinPercentage,
-                        AwayLastTenGamesWinPercentage = (float) away.LastTenGameWinPercentage,
-                        HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
-                        AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
-                        HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
-                        AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.Streak,
-                        AwayCurrentStreak = away.Streak,
-                        HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
-                        AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
-                        HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
-                        AwayBackToBack = game.GameDate.AddDays(-1) == away.LastGameDate,
-                    });
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
@@ -425,56 +336,8 @@ public class NbaPredictorTests : IntegrationTestBase
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    
-                    var home = model.GetTeam(game.HomeTeam);
-                    var away = model.GetTeam(game.AwayTeam);
-                
-                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
-                    var awayEloProbability = 1 - homeEloProbability;
-                    
-                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
-                    var awayGlickoProbability = 1 - homeGlickoProbability;
-                    
-                    var prediction = classifier.PredictGame(new NbaGameTrainingData
-                    {
-                        HomeIdentifier = home.TeamIdentifier,
-                        AwayIdentifier = away.TeamIdentifier,
-                        MatchupIdentifier = game.MatchupIdentifier,
-                        HomeEloRating = (float) home.EloRating,
-                        AwayEloRating = (float) away.EloRating,
-                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
-                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
-                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
-                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
-                        HomeEloProbability = (float) homeEloProbability,
-                        AwayEloProbability = (float) awayEloProbability,
-                        HomeGlickoRating = (float) home.GlickoScore.Rating,
-                        AwayGlickoRating = (float) away.GlickoScore.Rating,
-                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
-                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
-                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
-                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
-                        HomeGlickoProbability = (float) homeGlickoProbability,
-                        AwayGlickoProbability = (float) awayGlickoProbability,
-                        HomeOdds = (float?) gameOdds?.HomeOdds,
-                        AwayOdds = (float?) gameOdds?.AwayOdds,
-                        HomeTotalWinPercentage = (float) home.TotalWinPercentage,
-                        AwayTotalWinPercentage = (float) away.TotalWinPercentage,
-                        HomeWinPercentageAtHome = (float) home.HomeWinPercentage,
-                        AwayWinPercentageWhenAway = (float) away.AwayWinPercentage,
-                        HomeLastTenGamesWinPercentage = (float)home.LastTenGameWinPercentage,
-                        AwayLastTenGamesWinPercentage = (float)away.LastTenGameWinPercentage,
-                        HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
-                        AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
-                        HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
-                        AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.Streak,
-                        AwayCurrentStreak = away.Streak,
-                        HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
-                        AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
-                        HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
-                        AwayBackToBack = game.GameDate.AddDays(-1) == away.LastGameDate,
-                    });
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
@@ -630,56 +493,8 @@ public class NbaPredictorTests : IntegrationTestBase
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    
-                    var home = model.GetTeam(game.HomeTeam);
-                    var away = model.GetTeam(game.AwayTeam);
-                
-                    var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, game);
-                    var awayEloProbability = 1 - homeEloProbability;
-                    
-                    var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
-                    var awayGlickoProbability = 1 - homeGlickoProbability;
-                    
-                    var prediction = classifier.PredictGame(new NbaGameTrainingData
-                    {
-                        HomeIdentifier = home.TeamIdentifier,
-                        AwayIdentifier = away.TeamIdentifier,
-                        MatchupIdentifier = game.MatchupIdentifier,
-                        HomeEloRating = (float) home.EloRating,
-                        AwayEloRating = (float) away.EloRating,
-                        HomeEloMomentum5Games = (float) home.EloMomentum5Games,
-                        AwayEloMomentum5Games = (float) away.EloMomentum5Games,
-                        HomeEloMomentum10Games = (float) home.EloMomentum10Games,
-                        AwayEloMomentum10Games = (float) away.EloMomentum10Games,
-                        HomeEloProbability = (float) homeEloProbability,
-                        AwayEloProbability = (float) awayEloProbability,
-                        HomeGlickoRating = (float) home.GlickoScore.Rating,
-                        AwayGlickoRating = (float) away.GlickoScore.Rating,
-                        HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
-                        AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
-                        HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
-                        AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
-                        HomeGlickoProbability = (float) homeGlickoProbability,
-                        AwayGlickoProbability = (float) awayGlickoProbability,
-                        HomeOdds = (float?) gameOdds?.HomeOdds,
-                        AwayOdds = (float?) gameOdds?.AwayOdds,
-                        HomeTotalWinPercentage = (float) home.TotalWinPercentage,
-                        AwayTotalWinPercentage = (float) away.TotalWinPercentage,
-                        HomeWinPercentageAtHome = (float) home.HomeWinPercentage,
-                        AwayWinPercentageWhenAway = (float) away.AwayWinPercentage,
-                        HomeLastTenGamesWinPercentage = (float)home.LastTenGameWinPercentage,
-                        AwayLastTenGamesWinPercentage = (float)away.LastTenGameWinPercentage,
-                        HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
-                        AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
-                        HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
-                        AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
-                        HomeCurrentStreak = home.Streak,
-                        AwayCurrentStreak = away.Streak,
-                        HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
-                        AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
-                        HomeBackToBack = game.GameDate.AddDays(-1) == home.LastGameDate,
-                        AwayBackToBack = game.GameDate.AddDays(-1) == away.LastGameDate,
-                    });
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));

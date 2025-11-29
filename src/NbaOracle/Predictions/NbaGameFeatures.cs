@@ -1,65 +1,151 @@
-﻿using System;
-using Microsoft.ML.Data;
+﻿using Microsoft.ML.Data;
 
 namespace NbaOracle.Predictions;
 
+public class NbaGameTrainingDataFactory
+{
+    public static NbaGameTrainingData Create(GameInfo gameInfo, NbaHistoricalModel model)
+    {
+        var game = gameInfo.Game;
+        
+        var home = model.GetTeam(game.HomeTeam);
+        var away = model.GetTeam(game.AwayTeam);
+
+        var homeEloProbability = model.EloCalculator.PredictWinProbability(home, away, gameInfo.Game);
+        var awayEloProbability = 1 - homeEloProbability;
+        
+        var homeGlickoProbability = model.GlickoCalculator.PredictWinProbability(home.GlickoScore, away.GlickoScore);
+        var awayGlickoProbability = 1 - homeGlickoProbability;
+        
+        return new NbaGameTrainingData
+        {
+            HomeIdentifier = home.TeamIdentifier,
+            AwayIdentifier = away.TeamIdentifier,
+            HomeTeamWon = game.WinTeam == game.HomeTeam,
+            MatchupIdentifier = game.MatchupIdentifier,
+            HomeEloRating = (float) home.EloRating,
+            HomeEloMomentum5Games = (float) home.EloMomentum5Games,
+            HomeEloMomentum10Games = (float) home.EloMomentum10Games,
+            HomeEloProbability = (float) homeEloProbability,
+            AwayEloRating = (float)away.EloRating,
+            AwayEloMomentum5Games = (float) away.EloMomentum5Games,
+            AwayEloMomentum10Games = (float) away.EloMomentum10Games,
+            AwayEloProbability = (float) awayEloProbability,
+            HomeGlickoRating = (float) home.GlickoScore.Rating,
+            AwayGlickoRating = (float) away.GlickoScore.Rating,
+            HomeGlickoRatingDeviation = (float) home.GlickoScore.RatingDeviation,
+            AwayGlickoRatingDeviation = (float) away.GlickoScore.RatingDeviation,
+            HomeGlickoVolatility = (float) home.GlickoScore.Volatility,
+            AwayGlickoVolatility = (float) away.GlickoScore.Volatility,
+            HomeGlickoProbability = (float) homeGlickoProbability,
+            AwayGlickoProbability = (float) awayGlickoProbability,
+            HomeOdds = (float?)gameInfo.Odds?.HomeOdds,
+            AwayOdds = (float?)gameInfo.Odds?.AwayOdds,
+            HomeTotalWinPercentage = (float)home.TotalWinPercentage,
+            AwayTotalWinPercentage = (float)away.TotalWinPercentage,
+            HomeWinPercentageAtHome = (float)home.HomeWinPercentage,
+            AwayWinPercentageWhenAway = (float)away.AwayWinPercentage,
+            HomeLastTenGamesWinPercentage = (float)home.LastTenGameWinPercentage,
+            AwayLastTenGamesWinPercentage = (float)away.LastTenGameWinPercentage,
+            HomeOffensiveRating = (float) home.LastTenGamesOffensiveRatingPercentage,
+            AwayOffensiveRating = (float) away.LastTenGamesOffensiveRatingPercentage,
+            HomeDefensiveRating = (float) home.LastTenGamesDefensiveRatingPercentage,
+            AwayDefensiveRating = (float) away.LastTenGamesDefensiveRatingPercentage,
+            HomeCurrentStreak = home.Streak,
+            AwayCurrentStreak = away.Streak,
+            HomeRestDaysBeforeGame = home.GetRestDays(game.GameDate),
+            AwayRestDaysBeforeGame = away.GetRestDays(game.GameDate),
+            HomeBackToBack = home.LastGameDate == game.GameDate.AddDays(-1),
+            AwayBackToBack = away.LastGameDate == game.GameDate.AddDays(-1),
+            
+            HomeFourFactor10AvgPace = (float) home.FourFactors.AvgPace,
+            HomeFourFactor10AvgEfg = (float) home.FourFactors.AvgEfg,
+            HomeFourFactor10AvgTov = (float) home.FourFactors.AvgTov,
+            HomeFourFactor10AvgOrb = (float) home.FourFactors.AvgOrb,
+            HomeFourFactor10AvgFtfga = (float) home.FourFactors.AvgFtfga,
+            HomeFourFactor10AvgOrtg = (float) home.FourFactors.AvgOrtg,
+            
+            AwayFourFactor10AvgPace = (float) away.FourFactors.AvgPace,
+            AwayFourFactor10AvgEfg = (float) away.FourFactors.AvgEfg,
+            AwayFourFactor10AvgTov = (float) away.FourFactors.AvgTov,
+            AwayFourFactor10AvgOrb = (float) away.FourFactors.AvgOrb,
+            AwayFourFactor10AvgFtfga = (float) away.FourFactors.AvgFtfga,
+            AwayFourFactor10AvgOrtg = (float) away.FourFactors.AvgOrtg,
+        };
+    }
+}
+
 public class NbaGameTrainingData
 {
-    public string HomeIdentifier { get; set; }
-    public string AwayIdentifier { get; set; }
-    public string MatchupIdentifier { get; set; }
+    public required string HomeIdentifier { get; init; }
+    public required string AwayIdentifier { get; init; }
+    public required string MatchupIdentifier { get; init; }
     
-    public bool HomeTeamWon { get; set; }
+    public required bool HomeTeamWon { get; init; }
     
-    public float HomeEloRating { get; set; }
-    public float AwayEloRating { get; set; }
+    public required float HomeEloRating { get; init; }
+    public required  float AwayEloRating { get; init; }
     
-    public float HomeEloMomentum5Games { get; set; }
-    public float AwayEloMomentum5Games { get; set; }
+    public required float HomeEloMomentum5Games { get; init; }
+    public required float AwayEloMomentum5Games { get; init; }
     
-    public float HomeEloMomentum10Games { get; set; }
-    public float AwayEloMomentum10Games { get; set; }
+    public required float HomeEloMomentum10Games { get; init; }
+    public required float AwayEloMomentum10Games { get; init; }
 
-    public float HomeEloProbability { get; set; }
-    public float AwayEloProbability { get; set; }
+    public required float HomeEloProbability { get; init; }
+    public required float AwayEloProbability { get; init; }
     
-    public float HomeGlickoRating { get; set; }
-    public float AwayGlickoRating { get; set; }
+    public required float HomeGlickoRating { get; init; }
+    public required float AwayGlickoRating { get; init; }
     
-    public float HomeGlickoRatingDeviation { get; set; }
-    public float AwayGlickoRatingDeviation { get; set; }
+    public required float HomeGlickoRatingDeviation { get; init; }
+    public required float AwayGlickoRatingDeviation { get; init; }
     
-    public float HomeGlickoVolatility { get; set; }
-    public float AwayGlickoVolatility { get; set; }
+    public required float HomeGlickoVolatility { get; init; }
+    public required float AwayGlickoVolatility { get; init; }
     
-    public float HomeGlickoProbability { get; set; }
-    public float AwayGlickoProbability { get; set; }
+    public required float HomeGlickoProbability { get; init; }
+    public required float AwayGlickoProbability { get; init; }
     
-    public float? HomeOdds { get; set; }
-    public float? AwayOdds { get; set; }
+    public required float? HomeOdds { get; init; }
+    public required float? AwayOdds { get; init; }
     
-    public float HomeTotalWinPercentage { get; set; }
-    public float AwayTotalWinPercentage { get; set; }
+    public required  float HomeTotalWinPercentage { get; init; }
+    public required float AwayTotalWinPercentage { get; init; }
     
-    public float HomeLastTenGamesWinPercentage { get; set; }
-    public float AwayLastTenGamesWinPercentage { get; set; }
+    public required float HomeLastTenGamesWinPercentage { get; init; }
+    public required float AwayLastTenGamesWinPercentage { get; init; }
     
-    public float HomeWinPercentageAtHome { get; set; }
-    public float AwayWinPercentageWhenAway { get; set; }
+    public required float HomeWinPercentageAtHome { get; init; }
+    public required float AwayWinPercentageWhenAway { get; init; }
     
-    public float HomeOffensiveRating { get; set; }
-    public float HomeDefensiveRating { get; set; }
-    public float AwayOffensiveRating { get; set; }
-    public float AwayDefensiveRating { get; set; }
+    public required float HomeOffensiveRating { get; init; }
+    public required float HomeDefensiveRating { get; init; }
+    public required float AwayOffensiveRating { get; init; }
+    public required float AwayDefensiveRating { get; init; }
     
-    public float HomeCurrentStreak { get; set; }
-    public float AwayCurrentStreak { get; set; }
+    public required float HomeCurrentStreak { get; init; }
+    public required float AwayCurrentStreak { get; init; }
     
-    public float HomeRestDaysBeforeGame { get; set; }
-    public float AwayRestDaysBeforeGame { get; set; }
+    public required float HomeRestDaysBeforeGame { get; init; }
+    public required float AwayRestDaysBeforeGame { get; init; }
     
-    public bool HomeBackToBack { get; set; }
-    public bool AwayBackToBack { get; set; }
+    public required bool HomeBackToBack { get; init; }
+    public required bool AwayBackToBack { get; init; }
+
+    public required float HomeFourFactor10AvgPace { get; init; }
+    public required float HomeFourFactor10AvgEfg { get; init; }
+    public required float HomeFourFactor10AvgTov { get; init; }
+    public required float HomeFourFactor10AvgOrb { get; init; }
+    public required float HomeFourFactor10AvgFtfga { get; init; }
+    public required float HomeFourFactor10AvgOrtg { get; init; }
+    
+    public required float AwayFourFactor10AvgPace { get; init; }
+    public required float AwayFourFactor10AvgEfg { get; init; }
+    public required float AwayFourFactor10AvgTov { get; init; }
+    public required float AwayFourFactor10AvgOrb { get; init; }
+    public required float AwayFourFactor10AvgFtfga { get; init; }
+    public required float AwayFourFactor10AvgOrtg { get; init; }
 }
 
 public class NbaGameFeatures
@@ -133,6 +219,30 @@ public class NbaGameFeatures
     
     public required float HomeBackToBack { get; set; }
     public required float AwayBackToBack { get; set; }
+    
+    public required float HomeFourFactor10AvgPace { get; init; }
+    public required float AwayFourFactor10AvgPace { get; init; }
+    public required float FourFactor10AvgPaceDiff { get; init; }
+    
+    public required float HomeFourFactor10AvgEfg { get; init; }
+    public required float AwayFourFactor10AvgEfg { get; init; }
+    public required float FourFactor10AvgEfgDiff { get; init; }
+    
+    public required float HomeFourFactor10AvgTov { get; init; }
+    public required float AwayFourFactor10AvgTov { get; init; }
+    public required float FourFactor10AvgTovDiff { get; init; }
+    
+    public required float HomeFourFactor10AvgOrb { get; init; }
+    public required float AwayFourFactor10AvgOrb { get; init; }
+    public required float FourFactor10AvgOrbDiff { get; init; }
+    
+    public required float HomeFourFactor10AvgFtfga { get; init; }
+    public required float AwayFourFactor10AvgFtfga { get; init; }
+    public required float FourFactor10AvgFtfgaDiff { get; init; }
+    
+    public required float HomeFourFactor10AvgOrtg { get; init; }
+    public required float AwayFourFactor10AvgOrtg { get; init; }
+    public required float FourFactor10AvgOrtgDiff { get; init; }
     
     [ColumnName("Label")]
     public required bool HomeTeamWon { get; set; }
