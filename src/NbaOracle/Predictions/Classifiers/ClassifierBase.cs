@@ -67,96 +67,38 @@ public abstract class ClassifierBase<TOptions> : IPredictionEngine
             MatchupIdentifier = game.MatchupIdentifier,
             HomeTeamWon = game.HomeTeamWon,
             
-            EloDiff = game.HomeEloRating - game.AwayEloRating,
-            HomeEloRating = game.HomeEloRating,
-            AwayEloRating = game.AwayEloRating,
-            
-            HomeEloMomentum5Games = game.HomeEloMomentum5Games,
-            AwayEloMomentum5Games = game.AwayEloMomentum5Games,
-            EloMomentum5GamesDiff = game.HomeEloMomentum5Games - game.AwayEloMomentum5Games,
-            
-            HomeEloMomentum10Games = game.HomeEloMomentum10Games,
-            AwayEloMomentum10Games = game.AwayEloMomentum10Games,
-            EloMomentum10GamesDiff = game.HomeEloMomentum10Games - game.AwayEloMomentum10Games,
-            
-            HomeEloProbability = game.HomeEloProbability,
-            AwayEloProbability = game.AwayEloProbability,
-            EloProbabilityDiff = game.HomeEloProbability - game.AwayEloProbability, 
-            
-            HomeGlickoRating = game.HomeGlickoRating,
-            AwayGlickoRating = game.AwayGlickoRating,
-            GlickoRatingDiff = game.HomeGlickoRating - game.AwayGlickoRating,
-            
-            HomeGlickoRatingDeviation = game.HomeGlickoRatingDeviation,
-            AwayGlickoRatingDeviation = game.AwayGlickoRatingDeviation,
-            GlickoRatingDeviationDiff = game.HomeGlickoRatingDeviation - game.AwayGlickoRatingDeviation,
-            
-            HomeGlickoVolatility = game.HomeGlickoVolatility,
-            AwayGlickoVolatility = game.AwayGlickoVolatility,
-            GlickoVolatilityDiff = game.HomeGlickoVolatility - game.AwayGlickoVolatility,
-            
-            HomeGlickoProbability = game.HomeGlickoProbability,
-            AwayGlickoProbability = game.AwayGlickoProbability,
-            GlickoProbabilityDiff = game.HomeGlickoProbability - game.AwayGlickoProbability, 
-            
-            HomeOdds = game.HomeOdds ?? float.NaN,
-            AwayOdds = game.AwayOdds ?? float.NaN,
             OddsDiff = game.HomeOdds == null ? float.NaN : game.HomeOdds!.Value - game.AwayOdds!.Value,
             
-            HomeTotalWinPercentage = game.HomeTotalWinPercentage,
-            AwayTotalWinPercentage = game.AwayTotalWinPercentage,
-            TotalWinPercentageDiff = game.HomeTotalWinPercentage - game.AwayTotalWinPercentage,
+            EloDiff = game.HomeEloRating - game.AwayEloRating,
+            EloMomentum5GamesDiff = game.HomeEloMomentum5Games - game.AwayEloMomentum5Games,
+            EloMomentum10GamesDiff = game.HomeEloMomentum10Games - game.AwayEloMomentum10Games,
+            EloProbabilityDiff = game.HomeEloProbability - game.AwayEloProbability, 
             
+            GlickoRatingDiff = game.HomeGlickoRating - game.AwayGlickoRating,
+            GlickoRatingDeviationDiff = game.HomeGlickoRatingDeviation - game.AwayGlickoRatingDeviation,
+            GlickoVolatilityDiff = game.HomeGlickoVolatility - game.AwayGlickoVolatility,
+            GlickoProbabilityDiff = game.HomeGlickoProbability - game.AwayGlickoProbability, 
+            
+            TotalWinPercentageDiff = game.HomeTotalWinPercentage - game.AwayTotalWinPercentage,
             HomeWinPercentageAtHome = game.HomeWinPercentageAtHome,
             AwayWinPercentageWhenAway = game.AwayWinPercentageWhenAway,
-            
-            HomeLastTenGamesWinPercentage = game.HomeLastTenGamesWinPercentage,
-            AwayLastTenGamesWinPercentage = game.AwayLastTenGamesWinPercentage,
             LastTenGamesWinPercentageDiff = game.HomeLastTenGamesWinPercentage - game.AwayLastTenGamesWinPercentage, 
-            
-            HomeOffensiveRating = game.HomeOffensiveRating,
-            AwayOffensiveRating = game.AwayOffensiveRating,
-            
-            HomeDefensiveRating = game.HomeDefensiveRating,
-            AwayDefensiveRating = game.AwayDefensiveRating,
+            CurrentStreakDiff = game.HomeCurrentStreak - game.AwayCurrentStreak,
             
             OffensiveRatingDiff = game.HomeOffensiveRating - game.AwayOffensiveRating,
             DefensiveRatingDiff = game.HomeDefensiveRating - game.AwayDefensiveRating,
             
-            HomeCurrentStreak = game.HomeCurrentStreak,
-            AwayCurrentStreak = game.AwayCurrentStreak,
-            CurrentStreakDiff = game.HomeCurrentStreak - game.AwayCurrentStreak,
-            
-            HomeRestDays = game.HomeRestDaysBeforeGame,
-            AwayRestDays = game.AwayRestDaysBeforeGame,
             RestDaysDiff = game.HomeRestDaysBeforeGame - game.AwayRestDaysBeforeGame,
-            
             HomeBackToBack = game.HomeBackToBack ? 1 : 0,
             AwayBackToBack = game.AwayBackToBack ? 1 : 0,
+            GamesLast7DaysDiff = game.HomeGamesLast7Days - game.AwayGamesLast7Days,
             
-            HomeFourFactor10AvgPace =  game.HomeFourFactor10AvgPace,
-            AwayFourFactor10AvgPace = game.AwayFourFactor10AvgPace,
             FourFactor10AvgPaceDiff = game.HomeFourFactor10AvgPace - game.AwayFourFactor10AvgPace, 
-            
-            HomeFourFactor10AvgEfg =  game.HomeFourFactor10AvgEfg,
-            AwayFourFactor10AvgEfg = game.AwayFourFactor10AvgEfg,
             FourFactor10AvgEfgDiff = game.HomeFourFactor10AvgEfg - game.AwayFourFactor10AvgEfg,
-            
-            HomeFourFactor10AvgTov = game.HomeFourFactor10AvgTov,
-            AwayFourFactor10AvgTov = game.AwayFourFactor10AvgTov,
             FourFactor10AvgTovDiff = game.HomeFourFactor10AvgTov - game.AwayFourFactor10AvgTov,
-            
-            HomeFourFactor10AvgOrb = game.HomeFourFactor10AvgOrb,
-            AwayFourFactor10AvgOrb = game.AwayFourFactor10AvgOrb,
             FourFactor10AvgOrbDiff = game.HomeFourFactor10AvgOrb - game.AwayFourFactor10AvgOrb,
-            
-            HomeFourFactor10AvgFtfga = game.HomeFourFactor10AvgFtfga,
-            AwayFourFactor10AvgFtfga = game.AwayFourFactor10AvgFtfga,
             FourFactor10AvgFtfgaDiff = game.HomeFourFactor10AvgFtfga - game.AwayFourFactor10AvgFtfga,
-            
-            HomeFourFactor10AvgOrtg = game.HomeFourFactor10AvgOrtg,
-            AwayFourFactor10AvgOrtg = game.AwayFourFactor10AvgOrtg,
-            FourFactor10AvgOrtgDiff = game.HomeFourFactor10AvgOrtg - game.AwayFourFactor10AvgOrtg
+            FourFactor10AvgOrtgDiff = game.HomeFourFactor10AvgOrtg - game.AwayFourFactor10AvgOrtg,
         });
     }
 

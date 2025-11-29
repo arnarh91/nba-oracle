@@ -71,6 +71,9 @@ public class NbaGameTrainingDataFactory
             AwayFourFactor10AvgOrb = (float) away.FourFactors.AvgOrb,
             AwayFourFactor10AvgFtfga = (float) away.FourFactors.AvgFtfga,
             AwayFourFactor10AvgOrtg = (float) away.FourFactors.AvgOrtg,
+            
+            HomeGamesLast7Days = home.ScheduleDensity.GamesInLastXDays(game.GameDate),
+            AwayGamesLast7Days = away.ScheduleDensity.GamesInLastXDays(game.GameDate)
         };
     }
 }
@@ -146,6 +149,9 @@ public class NbaGameTrainingData
     public required float AwayFourFactor10AvgOrb { get; init; }
     public required float AwayFourFactor10AvgFtfga { get; init; }
     public required float AwayFourFactor10AvgOrtg { get; init; }
+    
+    public required int HomeGamesLast7Days { get; init; }
+    public required int AwayGamesLast7Days { get; init; }
 }
 
 public class NbaGameFeatures
@@ -154,94 +160,37 @@ public class NbaGameFeatures
     public required string AwayTeamIdentifier { get; set; }
     public required string MatchupIdentifier { get; set; }
     
-    public required float HomeEloRating { get; set; }
-    public required float AwayEloRating { get; set; }
-    public required float EloDiff { get; set; }
-    
-    public required float HomeEloMomentum5Games { get; set; }
-    public required float AwayEloMomentum5Games { get; set; }
-    public required float EloMomentum5GamesDiff { get; set; }
-    
-    public required float HomeEloMomentum10Games { get; set; }
-    public required float AwayEloMomentum10Games { get; set; }
-    public required float EloMomentum10GamesDiff { get; set; }
-    
-    public required float HomeEloProbability { get; set; }
-    public required float AwayEloProbability { get; set; }
-    public required float EloProbabilityDiff { get; set; }
-    
-    public required float HomeGlickoRating { get; set; }
-    public required float AwayGlickoRating { get; set; }
-    public required float GlickoRatingDiff { get; set; }
-    
-    public required  float HomeGlickoRatingDeviation { get; set; }
-    public required float AwayGlickoRatingDeviation { get; set; }
-    public required float GlickoRatingDeviationDiff { get; set; }
-    
-    public required float HomeGlickoVolatility { get; set; }
-    public required float AwayGlickoVolatility { get; set; }
-    public required float GlickoVolatilityDiff { get; set; }
-    
-    public required float HomeGlickoProbability { get; set; }
-    public required float AwayGlickoProbability { get; set; }
-    public required float GlickoProbabilityDiff { get; set; }
-    
-    public float HomeOdds { get; set; }
-    public float AwayOdds { get; set; }
     public float OddsDiff { get; set; }
     
-    public required float HomeTotalWinPercentage { get; set; }
-    public required float AwayTotalWinPercentage { get; set; }
-    public required float TotalWinPercentageDiff { get; set; }
+    public required float EloDiff { get; set; }
+    public required float EloMomentum5GamesDiff { get; set; }
+    public required float EloMomentum10GamesDiff { get; set; }
+    public required float EloProbabilityDiff { get; set; }
     
+    public required float GlickoRatingDiff { get; set; }
+    public required float GlickoRatingDeviationDiff { get; set; }
+    public required float GlickoVolatilityDiff { get; set; }
+    public required float GlickoProbabilityDiff { get; set; }
+    
+    public required float TotalWinPercentageDiff { get; set; }
     public required float HomeWinPercentageAtHome { get; set; }
     public required float AwayWinPercentageWhenAway { get; set; }
-    
-    public required float HomeLastTenGamesWinPercentage { get; set; }
-    public required float AwayLastTenGamesWinPercentage { get; set; }
     public required float LastTenGamesWinPercentageDiff { get; set; }
-    
-    public required float HomeOffensiveRating { get; set; }
-    public required float AwayOffensiveRating { get; set; }
-    public required float OffensiveRatingDiff { get; set; }
-    
-    public required float HomeDefensiveRating { get; set; }
-    public required float AwayDefensiveRating { get; set; }
-    public required float DefensiveRatingDiff { get; set; }
-    
-    public required float HomeCurrentStreak { get; set; }
-    public required float AwayCurrentStreak { get; set; }
     public required float CurrentStreakDiff { get; set; }
     
-    public required float HomeRestDays { get; set; }
-    public required float AwayRestDays { get; set; }
-    public required float RestDaysDiff { get; set; }
+    public required float OffensiveRatingDiff { get; set; }
+    public required float DefensiveRatingDiff { get; set; }
     
+    public required float RestDaysDiff { get; set; }
     public required float HomeBackToBack { get; set; }
     public required float AwayBackToBack { get; set; }
+    public required float GamesLast7DaysDiff { get; set; }
     
-    public required float HomeFourFactor10AvgPace { get; init; }
-    public required float AwayFourFactor10AvgPace { get; init; }
     public required float FourFactor10AvgPaceDiff { get; init; }
-    
-    public required float HomeFourFactor10AvgEfg { get; init; }
-    public required float AwayFourFactor10AvgEfg { get; init; }
     public required float FourFactor10AvgEfgDiff { get; init; }
-    
-    public required float HomeFourFactor10AvgTov { get; init; }
-    public required float AwayFourFactor10AvgTov { get; init; }
     public required float FourFactor10AvgTovDiff { get; init; }
-    
-    public required float HomeFourFactor10AvgOrb { get; init; }
-    public required float AwayFourFactor10AvgOrb { get; init; }
     public required float FourFactor10AvgOrbDiff { get; init; }
-    
-    public required float HomeFourFactor10AvgFtfga { get; init; }
-    public required float AwayFourFactor10AvgFtfga { get; init; }
     public required float FourFactor10AvgFtfgaDiff { get; init; }
-    
-    public required float HomeFourFactor10AvgOrtg { get; init; }
-    public required float AwayFourFactor10AvgOrtg { get; init; }
     public required float FourFactor10AvgOrtgDiff { get; init; }
     
     [ColumnName("Label")]

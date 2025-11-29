@@ -5,7 +5,6 @@ using NbaOracle.Data.GameBettingOdds;
 using NbaOracle.Data.Games;
 using NbaOracle.Predictions.Elo;
 using NbaOracle.Predictions.Glicko;
-using Newtonsoft.Json.Linq;
 
 namespace NbaOracle.Predictions;
 
@@ -82,11 +81,12 @@ public class TeamStatistics
         EloRatings = [new EloRating(DateOnly.MinValue, EloRating)];
         GlickoScore = new GlickoScore(teamIdentifier);
         FourFactors = new FourFactorsScore();
+        ScheduleDensity = new ScheduleDensity();
     }
 
     public void Regress(double eloRatingMean, double regressionFactor)
     {
-        EloRating = eloRatingMean + regressionFactor * (EloRating - eloRatingMean); // move to specifc classy  todo
+        EloRating = eloRatingMean + regressionFactor * (EloRating - eloRatingMean); // todo move to specifc classy  todo
         
         const double glickoRatingMean = 1500.0;
         GlickoScore.Rating = glickoRatingMean + regressionFactor * (GlickoScore.Rating - glickoRatingMean);
@@ -94,6 +94,7 @@ public class TeamStatistics
         
         LastGameDate = null;
         FourFactors.Regress();
+        ScheduleDensity.Regress();
         
         TotalGames = 0;
         TotalWinPercentage = 0;
@@ -132,6 +133,7 @@ public class TeamStatistics
     public GlickoScore GlickoScore { get; }
     
     public FourFactorsScore FourFactors { get; } 
+    public ScheduleDensity ScheduleDensity { get; }
     
     public int Streak { get; set; }
     
@@ -158,11 +160,13 @@ public class TeamStatistics
     
     public int RestDays { get; private set; }
     
+    
     public void AddGame(Game game, double eloRating, GlickoRating glickoRating)
     {
         SetRestDays(game);
+        
         LastGameDate = game.GameDate;
-
+        
         SetCurrentStreak(game);
         SetEloRating(game, eloRating);
         
@@ -177,8 +181,9 @@ public class TeamStatistics
         SetLastTenGameDefensiveRating(game);
         
         FourFactors.Apply(game.HomeTeam == TeamIdentifier ? game.HomeBoxScore.FourFactors : game.AwayBoxScore.FourFactors);
-    }
-
+        ScheduleDensity.Apply(game.GameDate);
+    } 
+    
     public void CopyFrom(TeamStatistics teamStatistics)
     {
         throw new NotSupportedException("fix");
@@ -389,4 +394,35 @@ public record FourFactorsScore
     
     private List<decimal> Ortg { get; set; } = [];
     public decimal AvgOrtg { get; private set; }
+}
+
+public record ScheduleDensity
+{
+    private const int ScheduleDensityWindowDays = 7;
+    private Queue<DateOnly> RecentGameDates { get; } = new();
+
+    public void Apply(DateOnly gameDate)
+    {
+        CleanupOldDates(gameDate);
+        RecentGameDates.Enqueue(gameDate);
+    }
+
+    public void Regress()
+    {
+        RecentGameDates.Clear();
+    }
+    
+    public int GamesInLastXDays(DateOnly currentGameDate)
+    {
+        CleanupOldDates(currentGameDate);
+        return RecentGameDates.Count;
+    }
+
+    private void CleanupOldDates(DateOnly currentDate)
+    {
+        while (RecentGameDates.Count > 0 && currentDate.DayNumber - RecentGameDates.Peek().DayNumber > ScheduleDensityWindowDays)
+        {
+            RecentGameDates.Dequeue();
+        }
+    }
 }
