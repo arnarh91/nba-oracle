@@ -227,19 +227,18 @@ public class NbaPredictorTests : IntegrationTestBase
         
         foreach (var (classifier, predictions) in classifiers)
         {
-            var model = historicalModel.Copy();
             foreach (var dateGroup in games2024.GroupBy(x => x.GameDate))
             {
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), historicalModel);
                     var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
                     
-                    model.Evolve(new GameInfo(game, null));
+                    historicalModel.Evolve(new GameInfo(game, null));
                 }   
             }
         }
@@ -330,19 +329,18 @@ public class NbaPredictorTests : IntegrationTestBase
         
         foreach (var (classifier, predictions) in classifiers)
         {
-            var model = historicalModel.Copy();
             foreach (var dateGroup in games2024.GroupBy(x => x.GameDate))
             {
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), historicalModel);
                     var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
                     
-                    model.Evolve(new GameInfo(game, null));
+                    historicalModel.Evolve(new GameInfo(game, null));
                 }   
             }
         }
@@ -389,71 +387,30 @@ public class NbaPredictorTests : IntegrationTestBase
 
         string[] features =
         [
-            // nameof(NbaGameFeatures.HomeEloRating),
-            // nameof(NbaGameFeatures.AwayEloRating),
             nameof(NbaGameFeatures.EloDiff),
-            
-            // nameof(NbaGameFeatures.HomeEloMomentum5Games),
-            // nameof(NbaGameFeatures.AwayEloMomentum5Games),
             nameof(NbaGameFeatures.EloMomentum5GamesDiff),
-            
-            // nameof(NbaGameFeatures.HomeEloMomentum10Games),
-            // nameof(NbaGameFeatures.AwayEloMomentum10Games),
             nameof(NbaGameFeatures.EloMomentum10GamesDiff),
-            
-            // nameof(NbaGameFeatures.HomeEloProbability),
-            // nameof(NbaGameFeatures.AwayEloProbability),
             nameof(NbaGameFeatures.EloProbabilityDiff),
-            
-            // nameof(NbaGameFeatures.HomeGlickoRating),
-            // nameof(NbaGameFeatures.AwayGlickoRating),
             nameof(NbaGameFeatures.GlickoRatingDiff),
-            
-            // nameof(NbaGameFeatures.HomeGlickoRatingDeviation),
-            // nameof(NbaGameFeatures.AwayGlickoRatingDeviation),
             nameof(NbaGameFeatures.GlickoRatingDeviationDiff),
-            
-            // nameof(NbaGameFeatures.HomeGlickoVolatility),
-            // nameof(NbaGameFeatures.AwayGlickoVolatility),
             nameof(NbaGameFeatures.GlickoVolatilityDiff),
-            
-            // nameof(NbaGameFeatures.HomeGlickoProbability),
-            // nameof(NbaGameFeatures.AwayGlickoProbability),
             nameof(NbaGameFeatures.GlickoProbabilityDiff),
-            
-            // nameof(NbaGameFeatures.HomeOdds),
-            // nameof(NbaGameFeatures.AwayOdds),
-            // nameof(NbaGameFeatures.OddsDiff),
-            
-            // nameof(NbaGameFeatures.HomeTotalWinPercentage),
-            // nameof(NbaGameFeatures.AwayTotalWinPercentage),
             nameof(NbaGameFeatures.TotalWinPercentageDiff),
-            
             nameof(NbaGameFeatures.HomeWinPercentageAtHome),
             nameof(NbaGameFeatures.AwayWinPercentageWhenAway),
-            
-            // nameof(NbaGameFeatures.HomeLastTenGamesWinPercentage),
-            // nameof(NbaGameFeatures.AwayLastTenGamesWinPercentage),
             nameof(NbaGameFeatures.LastTenGamesWinPercentageDiff),
-            
-            // nameof(NbaGameFeatures.HomeOffensiveRating),
-            // nameof(NbaGameFeatures.AwayOffensiveRating),
             nameof(NbaGameFeatures.OffensiveRatingDiff),
-            
-            // nameof(NbaGameFeatures.HomeDefensiveRating),
-            // nameof(NbaGameFeatures.AwayDefensiveRating),
             nameof(NbaGameFeatures.DefensiveRatingDiff),
-            
-            // nameof(NbaGameFeatures.HomeCurrentStreak),
-            // nameof(NbaGameFeatures.AwayCurrentStreak),
             nameof(NbaGameFeatures.CurrentStreakDiff),
-            
-            // nameof(NbaGameFeatures.HomeRestDays),
-            // nameof(NbaGameFeatures.AwayRestDays),
             nameof(NbaGameFeatures.RestDaysDiff),
-            
             nameof(NbaGameFeatures.HomeBackToBack),
             nameof(NbaGameFeatures.AwayBackToBack),
+            nameof(NbaGameFeatures.FourFactor10AvgPaceDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgEfgDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgTovDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgOrbDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgFtfgaDiff),
+            nameof(NbaGameFeatures.FourFactor10AvgOrtgDiff),
         ];
 
         var options = new FastForestBinaryTrainer.Options
@@ -487,19 +444,18 @@ public class NbaPredictorTests : IntegrationTestBase
         
         foreach (var (classifier, predictions) in classifiers)
         {
-            var model = historicalModel.Copy();
             foreach (var dateGroup in games2024.GroupBy(x => x.GameDate))
             {
                 foreach (var game in dateGroup)
                 {
                     var gameOdds = odds2024.GetValueOrDefault(game.GameId);
-                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), model);
+                    var trainingData = NbaGameTrainingDataFactory.Create(new GameInfo(game, gameOdds), historicalModel);
                     var prediction = classifier.PredictGame(trainingData);
 
                     var predictedWinner = prediction.HomeTeamWins ? game.HomeTeam : game.AwayTeam;
                     predictions.AddPrediction(new GamePredictionResult(game.GameId, game.WinTeam, predictedWinner, prediction.Probability));
                     
-                    model.Evolve(new GameInfo(game, null));
+                    historicalModel.Evolve(new GameInfo(game, null));
                 }   
             }
         }

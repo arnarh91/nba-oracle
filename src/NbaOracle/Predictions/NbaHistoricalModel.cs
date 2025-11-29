@@ -65,14 +65,10 @@ public class NbaHistoricalModel
         away.AddGame(game, awayEloRating, awayGlickoRating);
     }
     
-    public void Regress(double mean = 1500.0, double regressionFactor = 0.75) 
+    public void Regress(double eloRatingMean = 1500.0, double regressionFactor = 0.75) 
     {
         foreach (var team in _teams.Values)
-        {
-            team.EloRating = mean + regressionFactor * (team.EloRating - mean);
-            team.Streak = 0;
-            team.LastGameDate = null;
-        }
+            team.Regress(eloRatingMean, regressionFactor);
     }
 }
 
@@ -86,6 +82,42 @@ public class TeamStatistics
         EloRatings = [new EloRating(DateOnly.MinValue, EloRating)];
         GlickoScore = new GlickoScore(teamIdentifier);
         FourFactors = new FourFactorsScore();
+    }
+
+    public void Regress(double eloRatingMean, double regressionFactor)
+    {
+        EloRating = eloRatingMean + regressionFactor * (EloRating - eloRatingMean); // move to specifc classy  todo
+        
+        const double glickoRatingMean = 1500.0;
+        GlickoScore.Rating = glickoRatingMean + regressionFactor * (GlickoScore.Rating - glickoRatingMean);
+        GlickoScore.RatingDeviation = Math.Min(350.0, GlickoScore.RatingDeviation + 50.0);
+        
+        LastGameDate = null;
+        FourFactors.Regress();
+        
+        TotalGames = 0;
+        TotalWinPercentage = 0;
+        TotalWinPercentage = 0;
+        Streak = 0;
+
+        HomeGames = 0;
+        HomeWins = 0;
+        HomeWinPercentage = 0;
+
+        AwayGames = 0;
+        AwayWins = 0;
+        AwayWinPercentage = 0;
+        
+        LastTenGamesOutcome.Clear();
+        LastTenGameWinPercentage = 0;
+        
+        LastTenGamesOffensiveRating.Clear();
+        LastTenGamesOffensiveRatingPercentage = 0;
+        
+        LastTenGamesDefensiveRating.Clear();
+        LastTenGamesDefensiveRatingPercentage = 0;
+
+        RestDays = 0;
     }
 
     public string TeamIdentifier { get; set; }
@@ -149,6 +181,7 @@ public class TeamStatistics
 
     public void CopyFrom(TeamStatistics teamStatistics)
     {
+        throw new NotSupportedException("fix");
         // todo maintain this
         LastGameDate = teamStatistics.LastGameDate;
         
@@ -311,6 +344,23 @@ public record FourFactorsScore
         AvgOrb = Orb.Average();
         AvgFtfga = Ftfga.Average();
         AvgOrtg = Ortg.Average();
+    }
+
+    public void Regress()
+    {
+        Pace.Clear();
+        Efg.Clear();
+        Tov.Clear();
+        Orb.Clear();
+        Ftfga.Clear();
+        Ortg.Clear();
+
+        AvgPace = 0;
+        AvgEfg = 0;
+        AvgTov = 0;
+        AvgOrb = 0;
+        AvgFtfga = 0;
+        AvgOrtg = 0;
     }
     
     private static void AddAndTrim(List<decimal> list, decimal value)
